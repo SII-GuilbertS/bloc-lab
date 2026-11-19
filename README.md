@@ -34,10 +34,11 @@ Les broches D0 et D1 sont volontairement absentes : elles servent à la liaison 
 
 ```html
 <iframe src="https://mon-site.fr/atelier-blocs/" title="Atelier de blocs Arduino"
-        allow="serial; camera" style="width:100%; height:90vh; border:0"></iframe>
+        allow="serial; camera; fullscreen" style="width:100%; height:90vh; border:0"></iframe>
 ```
 
-- `allow="serial; camera"` est **indispensable** : sans lui, Chrome interdit la carte et la webcam dans l'iframe.
+- `allow="serial; camera"` est **indispensable** : sans lui, Chrome interdit la carte et la webcam dans l'iframe. Ajoute `fullscreen` (comme ci-dessus) pour que le bouton « ⛶ Plein écran » de l'outil fonctionne ; sans lui, le bouton explique ce qu'il manque.
+- Le bouton « ◀ Masquer le panneau » replie la colonne de gauche (carte, modèle, webcam) pour agrandir les blocs ; le choix est mémorisé.
 - Le site qui contient l'iframe doit lui aussi être en **https** (sauf essai en local).
 - Si ça ne marche pas, la page l'écrit dans son journal : « Cette page est intégrée dans un autre site qui ne l'autorise pas… ».
 - Le serveur ne doit pas envoyer d'en-tête `X-Frame-Options` ni `Content-Security-Policy: frame-ancestors` qui interdit votre site, ni de `Permissions-Policy` qui bloque `serial` ou `camera`.

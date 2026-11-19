@@ -15,7 +15,7 @@ test("la page fonctionne dans une iframe avec allow=\"serial; camera\" et expliq
     const erreurs = [];
     page.on('pageerror', (e) => erreurs.push(String(e)));
     await page.goto(HOTE);
-    assert.equal(await page.getAttribute('#atelier', 'allow'), 'serial; camera');
+    assert.equal(await page.getAttribute('#atelier', 'allow'), 'serial; camera; fullscreen');
     const cadre = page.frame({ url: /ia-arduino\.html/ });
     await cadre.waitForFunction(() => window.iaArduino);
     assert.equal(await cadre.evaluate(() => window.iaArduino.dansIframe()), true);

@@ -90,3 +90,6 @@
   #mxListe small { color: var(--gris-600); }
   #mxListe span:last-child { display: flex; gap: 4px; flex-wrap: wrap; }
   dialog input[type=password] { display: block; width: 100%; box-sizing: border-box; font: inherit; padding: 7px 9px; border: 1px solid var(--gris-200); border-radius: 8px; margin-top: 3px; }
+
+  body.panneau-replie main { grid-template-columns: 1fr; }
+  body.panneau-replie aside { display: none; }

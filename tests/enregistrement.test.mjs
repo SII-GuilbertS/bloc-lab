@@ -80,7 +80,7 @@ test("enseignant : connexion, enregistrer, rouvrir, modifier, dupliquer, supprim
     await page.fill('#exConsigne', 'Fais clignoter la LED.');
     await page.click('#btnEnregistrerSite');
     await page.waitForFunction(() => /Enregistré sur ton site/.test(document.getElementById('exMessageSite').textContent));
-    assert.equal(await page.inputValue('#exBaliseSite'), '<iframe src="' + site.url + '?exercice=le-clignotant" title="Le clignotant" allow="serial; camera" style="width:100%; height:90vh; border:0"></iframe>');
+    assert.equal(await page.inputValue('#exBaliseSite'), '<iframe src="' + site.url + '?exercice=le-clignotant" title="Le clignotant" allow="serial; camera; fullscreen" style="width:100%; height:90vh; border:0"></iframe>');
     const fichier = JSON.parse(site.lire('exercices/le-clignotant.json'));
     assert.equal(fichier.titre, 'Le clignotant'); assert.equal(fichier.consigne, 'Fais clignoter la LED.');
     assert.ok(fichier.blocs.blocks.blocks.length >= 1);
@@ -99,7 +99,7 @@ test("enseignant : connexion, enregistrer, rouvrir, modifier, dupliquer, supprim
     // Exercice rouvert : le bouton « Balise iframe » est là et donne le code.
     assert.equal(await page.isVisible('#btnBalise'), true);
     await page.click('#btnBalise');
-    assert.equal(await page.inputValue('#balTexte'), '<iframe src="' + site.url + '?exercice=le-clignotant" title="Le clignotant" allow="serial; camera" style="width:100%; height:90vh; border:0"></iframe>');
+    assert.equal(await page.inputValue('#balTexte'), '<iframe src="' + site.url + '?exercice=le-clignotant" title="Le clignotant" allow="serial; camera; fullscreen" style="width:100%; height:90vh; border:0"></iframe>');
     await page.click('#balFermer');
 
     // Modifier puis enregistrer de nouveau (même nom : pas de conflit, une version est gardée).

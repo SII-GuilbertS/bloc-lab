@@ -1161,6 +1161,12 @@
     try { await demarrerCamera(e.target.value); lancerAnalyse(); }
     catch (err) { journal('Changement de caméra impossible : ' + err.message, 'err'); }
   });
+  $('btnPanneau').addEventListener('click', () => majPanneau(!document.body.classList.contains('panneau-replie')));
+  $('btnPleinEcran').addEventListener('click', basculerPleinEcran);
+  document.addEventListener('fullscreenchange', () => {
+    $('btnPleinEcran').textContent = document.fullscreenElement ? '⛶ Quitter le plein écran' : '⛶ Plein écran';
+    Blockly.svgResize(ws);
+  });
   $('btnRelancerCamera').addEventListener('click', () => relancerCamera(true));
   if (navigator.mediaDevices && navigator.mediaDevices.addEventListener) {
     navigator.mediaDevices.addEventListener('devicechange', () => { if (state.cameraPerdue) planifierRelance(800); });
@@ -1209,6 +1215,26 @@
   $('btnEffacerJournal').addEventListener('click', () => { $('journal').innerHTML = ''; });
   window.addEventListener('beforeunload', () => { if (state.running) arreter(); });
 
+  /* ---------- Panneau de gauche repliable, plein écran ---------- */
+  function majPanneau(replie) {
+    document.body.classList.toggle('panneau-replie', replie);
+    $('btnPanneau').textContent = replie ? '▶ Afficher le panneau' : '◀ Masquer le panneau';
+    try { localStorage.setItem('ia-arduino-panneau', replie ? '1' : '0'); } catch (e) { /* sans importance */ }
+    Blockly.svgResize(ws);
+  }
+  async function basculerPleinEcran() {
+    if (document.fullscreenElement) { try { await document.exitFullscreen(); } catch (e) { /* déjà sorti */ } return; }
+    if (!document.fullscreenEnabled) {
+      alerte(dansIframe()
+        ? "Le plein écran n'est pas autorisé ici : le site qui contient cette page doit ajouter « fullscreen » dans l'attribut allow de l'iframe."
+        : "Ton navigateur n'autorise pas le plein écran sur cette page.");
+      return;
+    }
+    try { await document.documentElement.requestFullscreen(); }
+    catch (e) { journal('Plein écran impossible : ' + e.message, 'err'); }
+  }
+  try { if (localStorage.getItem('ia-arduino-panneau') === '1') majPanneau(true); } catch (e) { /* rien à restaurer */ }
+
   /* ---------- Exercices : fichier .json, mode élève (?exercice=nom) ---------- */
   const EXERCICE_FORMAT = 'bloc-lab-exercice';
   const ID_EXERCICE = /^[a-z0-9-]{1,60}$/;
@@ -1248,7 +1274,7 @@
   }
   function baliseIframe(id, titre, base) {
     const titreHtml = String(titre).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
-    return '<iframe src="' + base + '?exercice=' + id + '" title="' + titreHtml + '" allow="serial; camera" style="width:100%; height:90vh; border:0"></iframe>';
+    return '<iframe src="' + base + '?exercice=' + id + '" title="' + titreHtml + '" allow="serial; camera; fullscreen" style="width:100%; height:90vh; border:0"></iframe>';
   }
   // Fenêtre « Balise iframe » : le code à coller dans la page du site, pour l'exercice ouvert.
   function ouvrirBalise(e) {
