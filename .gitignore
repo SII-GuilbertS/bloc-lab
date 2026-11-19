@@ -1,0 +1,5 @@
+node_modules/
+dist/
+*.elf
+*.eep
+.DS_Store

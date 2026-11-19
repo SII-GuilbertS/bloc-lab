@@ -1,0 +1,21 @@
+{
+  "name": "bloc-lab",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Programmer une carte Arduino par blocs, avec la webcam et Teachable Machine — une seule page web en français.",
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "test": "node build.mjs && node --test \"tests/*.test.mjs\"",
+    "firmware": "node scripts/compile-firmware.mjs"
+  },
+  "dependencies": {
+    "@teachablemachine/image": "0.8.5",
+    "@tensorflow/tfjs": "1.3.1",
+    "blockly": "10.4.3",
+    "jszip": "3.10.1"
+  },
+  "devDependencies": {
+    "playwright-core": "^1.48.0"
+  }
+}

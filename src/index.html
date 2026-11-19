@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>IA + Arduino — pilotage par webcam</title>
+<style>/*__STYLE__*/</style>
+</head>
+<body>
+
+<header>
+  <h1>IA + Arduino<small>Piloter une carte avec la webcam et Teachable Machine</small></h1>
+  <div class="puces">
+    <span class="puce" id="puceCarte">Carte : non connectée</span>
+    <span class="puce" id="puceModele">Modèle : aucun</span>
+    <span class="puce" id="puceProgramme">Programme : arrêté</span>
+  </div>
+</header>
+<div id="alerte"></div>
+
+<main>
+<aside>
+
+  <div class="carte">
+    <h2><span class="num">1</span> Carte Arduino</h2>
+    <div class="ligne">
+      <button type="button" class="principal" id="btnConnecter">Connecter la carte</button>
+      <button type="button" id="btnDeconnecter" disabled>Déconnecter</button>
+    </div>
+    <div class="ligne" style="margin-top:8px">
+      <button type="button" class="vert" id="btnTeleverser">⬆ Téléverser le programme dans la carte</button>
+    </div>
+    <progress id="progTeleversement" max="1" value="0" style="display:none;width:100%;margin-top:8px"></progress>
+    <div class="aide" id="texteTeleversement"></div>
+    <details><summary>Autre type de carte</summary>
+      <select id="vitesseCarte" aria-label="Type de carte">
+        <option value="115200">Arduino Uno (ou Nano récente)</option>
+        <option value="57600">Arduino Nano (ancien bootloader)</option>
+      </select>
+    </details>
+    <p class="aide">Branche la carte en USB. Première utilisation : clique d'abord sur « Téléverser le programme dans la carte » (une seule fois par carte). Ferme tout autre logiciel qui utilise la carte (Arduino IDE, Vittascience…). Sans carte, le programme tourne quand même en simulation.</p>
+  </div>
+
+  <div class="carte">
+    <h2><span class="num">2</span> Modèle Teachable Machine</h2>
+    <p class="aide" style="margin-top:0"><b>Option A — modèle téléchargé</b> (sans Internet) : dans Teachable Machine, « Exporter le modèle » → TensorFlow.js → « Télécharger ». Choisis ici le fichier <code>.zip</code> obtenu, ou les 3 fichiers décompressés (<code>model.json</code>, <code>metadata.json</code>, <code>weights.bin</code>).</p>
+    <input type="file" id="fichiersModele" multiple accept=".zip,.json,.bin">
+    <p class="aide"><b>Option B — lien du modèle</b> (Internet nécessaire) :</p>
+    <input type="text" id="modelUrl" placeholder="https://teachablemachine.withgoogle.com/models/XXXXXXX/" aria-label="Lien du modèle">
+    <div class="ligne" style="margin-top:8px">
+      <button type="button" class="principal" id="btnChargerUrl">Charger le modèle</button>
+    </div>
+    <details>
+      <summary>Mode test sans webcam ni modèle</summary>
+      <p class="aide">Pour préparer ou vérifier un programme : saisis des noms de classes, puis simule la reconnaissance avec les boutons.</p>
+      <input type="text" id="classesTest" value="classe A, classe B" aria-label="Classes pour le test">
+      <div class="ligne" style="margin-top:8px"><button type="button" id="btnTest">Activer le mode test</button></div>
+    </details>
+    <p class="aide">Seuls les modèles d'<b>images</b> sont pris en charge (pas les poses ni les sons).</p>
+  </div>
+
+  <div class="carte">
+    <h2><span class="num">3</span> Webcam et reconnaissance</h2>
+    <div class="ligne" id="ligneCamera" style="display:none">
+      <select id="choixCamera" aria-label="Choix de la caméra"></select>
+    </div>
+    <div class="apercu" id="apercu">
+      <canvas id="canvasCam" width="320" height="240"></canvas>
+      <div class="guide"></div>
+      <div class="vide" id="apercuVide">Charge un modèle pour activer la webcam.</div>
+    </div>
+    <p class="aide" id="aideGuide" style="display:none">Le cadre en pointillés est la zone réellement analysée par l'IA.</p>
+    <div id="reconnu"></div>
+    <div id="barres"></div>
+  </div>
+
+  <div class="carte">
+    <h2>Journal</h2>
+    <div id="journal" aria-live="polite"></div>
+    <div class="ligne" style="margin-top:8px"><button type="button" class="mini" id="btnEffacerJournal">Effacer le journal</button></div>
+  </div>
+
+  <div class="carte">
+    <h2>Programme Arduino (pour les curieux)</h2>
+    <p class="aide">Voici le programme que le bouton « Téléverser » installe dans la carte. Tu peux aussi le copier dans l'Arduino IDE.</p>
+    <details>
+      <summary>Afficher le programme Arduino</summary>
+      <div class="ligne" style="margin-top:8px"><button type="button" class="mini" id="btnCopierIno">Copier le programme</button></div>
+      <pre id="inoCode">__INO__</pre>
+    </details>
+  </div>
+
+</aside>
+
+<section class="espace">
+  <div class="barre-outils">
+    <button type="button" class="vert" id="btnDemarrer" disabled>▶ Démarrer</button>
+    <button type="button" class="rouge" id="btnArreter" disabled>■ Arrêter</button>
+    <span class="espace-flex"></span>
+    <button type="button" id="btnExemple">Exemple : reconnaissance</button>
+    <button type="button" id="btnExemple2">Exemple : clignoter</button>
+    <button type="button" id="btnEnregistrer">Enregistrer</button>
+    <label class="fichier"><button type="button" id="btnOuvrir">Ouvrir…</button></label>
+    <input type="file" id="fichierProgramme" accept=".json" style="display:none">
+    <button type="button" id="btnTout">Tout effacer</button>
+  </div>
+  <div id="blocklyDiv"></div>
+  <details id="codeGenere">
+    <summary>Voir le code généré par les blocs (pour les curieux)</summary>
+    <pre id="codeAffiche"></pre>
+  </details>
+</section>
+</main>
+
+<footer>
+  Fonctionne dans Chrome ou Edge sur ordinateur. Les bibliothèques sont intégrées à cette page : Internet n'est nécessaire que pour charger un modèle depuis son lien.
+</footer>
+
+<script>/*__TF__*/</script>
+<script>/*__ZIP__*/</script>
+<script>/*__TM__*/</script>
+<script>/*__BLOCKLY__*/</script>
+<script>/*__BLOCKS__*/</script>
+<script>/*__JSGEN__*/</script>
+<script>/*__FR__*/</script>
+
+<script>/*__APP__*/</script>
+</body>
+</html>

@@ -1,0 +1,70 @@
+  :root {
+    --bleu: #2563eb; --bleu-fonce: #1d4ed8; --vert: #16a34a; --rouge: #dc2626; --orange: #d97706;
+    --gris-50: #f8fafc; --gris-100: #f1f5f9; --gris-200: #e2e8f0; --gris-400: #94a3b8; --gris-600: #475569; --gris-900: #0f172a;
+    --rayon: 10px;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif; color: var(--gris-900); background: var(--gris-100); display: flex; flex-direction: column; font-size: 15px; }
+  header { background: #fff; border-bottom: 1px solid var(--gris-200); padding: 10px 18px; display: flex; flex-wrap: wrap; align-items: center; gap: 12px 24px; }
+  header h1 { font-size: 18px; margin: 0; }
+  header h1 small { font-weight: 400; color: var(--gris-600); font-size: 13px; margin-left: 8px; }
+  .puces { display: flex; flex-wrap: wrap; gap: 8px; margin-left: auto; }
+  .puce { font-size: 13px; padding: 4px 10px; border-radius: 999px; background: var(--gris-200); color: var(--gris-600); white-space: nowrap; }
+  .puce.ok { background: #dcfce7; color: #166534; }
+  .puce.attente { background: #fef3c7; color: #92400e; }
+  .puce.erreur { background: #fee2e2; color: #991b1b; }
+  #alerte { display: none; background: #fef3c7; color: #92400e; padding: 8px 18px; font-size: 14px; border-bottom: 1px solid #fde68a; }
+  main { flex: 1; min-height: 0; display: grid; grid-template-columns: 390px 1fr; gap: 12px; padding: 12px; }
+  aside { overflow-y: auto; display: flex; flex-direction: column; gap: 12px; padding-right: 2px; }
+  section.espace { display: flex; flex-direction: column; min-height: 0; min-width: 0; background: #fff; border: 1px solid var(--gris-200); border-radius: var(--rayon); overflow: hidden; }
+  .carte { background: #fff; border: 1px solid var(--gris-200); border-radius: var(--rayon); padding: 12px 14px; }
+  .carte h2 { font-size: 15px; margin: 0 0 8px; display: flex; align-items: center; gap: 8px; }
+  .carte h2 .num { background: var(--bleu); color: #fff; border-radius: 50%; width: 22px; height: 22px; display: inline-flex; align-items: center; justify-content: center; font-size: 13px; }
+  .aide { color: var(--gris-600); font-size: 13px; margin: 6px 0 0; line-height: 1.4; }
+  .ligne { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  button { font: inherit; cursor: pointer; border: 1px solid var(--gris-200); background: #fff; color: var(--gris-900); padding: 7px 12px; border-radius: 8px; }
+  button:hover:not(:disabled) { background: var(--gris-100); }
+  button:disabled { opacity: .5; cursor: not-allowed; }
+  button.principal { background: var(--bleu); border-color: var(--bleu); color: #fff; }
+  button.principal:hover:not(:disabled) { background: var(--bleu-fonce); }
+  button.vert { background: var(--vert); border-color: var(--vert); color: #fff; }
+  button.vert:hover:not(:disabled) { background: #15803d; }
+  button.rouge { background: var(--rouge); border-color: var(--rouge); color: #fff; }
+  button.rouge:hover:not(:disabled) { background: #b91c1c; }
+  button.mini { padding: 2px 8px; font-size: 12px; }
+  input[type=text], select { font: inherit; padding: 7px 9px; border: 1px solid var(--gris-200); border-radius: 8px; width: 100%; background: #fff; }
+  label.fichier { display: inline-block; }
+  details { margin-top: 8px; }
+  summary { cursor: pointer; color: var(--gris-600); font-size: 13px; }
+  .apercu { position: relative; width: 100%; aspect-ratio: 4 / 3; background: #0f172a; border-radius: 8px; overflow: hidden; margin-top: 8px; }
+  .apercu canvas { width: 100%; height: 100%; display: block; }
+  .apercu .guide { position: absolute; top: 0; bottom: 0; left: 12.5%; width: 75%; border: 2px dashed rgba(255,255,255,.55); pointer-events: none; display: none; }
+  .apercu.actif .guide { display: block; }
+  .apercu .vide { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: var(--gris-400); font-size: 13px; text-align: center; padding: 12px; }
+  .apercu.actif .vide { display: none; }
+  #barres { margin-top: 10px; display: flex; flex-direction: column; gap: 6px; }
+  .barre { display: grid; grid-template-columns: 110px 1fr 48px auto; gap: 8px; align-items: center; font-size: 13px; }
+  .barre .nom { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .barre .piste { background: var(--gris-200); height: 12px; border-radius: 6px; overflow: hidden; }
+  .barre .rempli { display: block; height: 100%; width: 0; background: var(--bleu); transition: width .08s linear; }
+  .barre.top .rempli { background: var(--vert); }
+  .barre .pct { text-align: right; color: var(--gris-600); font-variant-numeric: tabular-nums; }
+  #reconnu { margin-top: 8px; font-size: 14px; }
+  #reconnu b { color: var(--vert); }
+  #journal { background: #0f172a; color: #cbd5e1; font: 12px/1.5 ui-monospace, Menlo, Consolas, monospace; border-radius: 8px; padding: 8px 10px; height: 170px; overflow-y: auto; white-space: pre-wrap; word-break: break-word; }
+  #journal .tx { color: #86efac; } #journal .sim { color: #94a3b8; } #journal .err { color: #fca5a5; }
+  #journal .rx { color: #93c5fd; } #journal .prog { color: #d8b4fe; } #journal .info { color: #e2e8f0; }
+  pre#inoCode { background: var(--gris-50); border: 1px solid var(--gris-200); border-radius: 8px; padding: 8px; font-size: 11.5px; max-height: 240px; overflow: auto; margin: 8px 0 0; }
+  .barre-outils { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 10px 12px; border-bottom: 1px solid var(--gris-200); background: var(--gris-50); }
+  .barre-outils .espace-flex { flex: 1; }
+  #blocklyDiv { flex: 1; min-height: 320px; }
+  #codeGenere { padding: 0 12px 10px; }
+  #codeGenere pre { background: var(--gris-50); border: 1px solid var(--gris-200); border-radius: 8px; padding: 8px; font-size: 12px; margin: 8px 0 0; max-height: 160px; overflow: auto; }
+  footer { font-size: 12px; color: var(--gris-600); padding: 0 18px 10px; }
+  @media (max-width: 1000px) {
+    body { height: auto; } html { height: auto; }
+    main { grid-template-columns: 1fr; }
+    aside { overflow: visible; }
+    #blocklyDiv { min-height: 480px; }
+  }

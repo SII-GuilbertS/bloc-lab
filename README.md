@@ -1,0 +1,59 @@
+# bloc-lab
+
+Programmer une carte **Arduino** par **blocs**, en français, avec la **webcam** et l'IA **Teachable Machine** — dans une seule page web (Chrome ou Edge).
+
+Projet de technologie, cycle 4 (5ème), Collège Bétance. Objectif à terme : un « atelier de blocs en ligne » intégrable dans ÉLÉA.
+
+## Utilisation (élèves et professeur)
+
+1. Ouvrir `dist/ia-arduino.html` dans Chrome ou Edge (double-clic, aucune installation).
+2. **Étape 1 :** brancher la carte, cliquer sur « ⬆ Téléverser le programme dans la carte » (une seule fois par carte), puis « Connecter la carte ».
+3. **Étape 2 :** charger un modèle Teachable Machine (fichier `.zip` exporté en TensorFlow.js, ou lien du modèle).
+4. **Étape 3 :** assembler les blocs, puis « ▶ Démarrer ».
+
+Sans carte ni webcam, le « mode test » simule la reconnaissance et affiche les commandes dans le journal.
+
+## Blocs disponibles
+
+| Catégorie | Blocs |
+|---|---|
+| Démarrage | « au démarrage » (une fois), « à chaque image de la webcam » |
+| Boucles | « répéter pour toujours », répéter n fois, répéter tant que, sortir de la boucle, attendre n secondes |
+| IA | « l'IA reconnaît … à plus de … % », « confiance de … », « classe la plus probable » |
+| Arduino | écrire état haut (1) / bas (0) sur D2–D13, lire l'état de la broche, servomoteur (0–180°), sortie PWM, écrire dans le journal |
+| Logique / Maths / Texte | si / sinon, comparaisons, et / ou / non, nombres, calculs, texte |
+
+Les broches D0 et D1 sont volontairement absentes : elles servent à la liaison USB.
+
+## Développement
+
+Prérequis : Node.js 20+.
+
+```bash
+npm install          # bibliothèques (Blockly, TensorFlow.js, Teachable Machine, JSZip) et Playwright
+npm run build        # écrit dist/ia-arduino.html (page unique, bibliothèques incluses)
+npm test             # construit puis lance les tests automatisés
+npm run firmware     # recompile le programme Arduino (nécessite arduino-cli, voir scripts/compile-firmware.mjs)
+```
+
+Les tests pilotent un vrai navigateur. Si Playwright n'a pas de navigateur, indiquer Chrome/Edge :
+
+```bash
+CHROME_PATH="/chemin/vers/chrome" npm test          # Linux / macOS
+set CHROME_PATH=C:\Program Files\Google\Chrome\Application\chrome.exe && npm test   # Windows
+```
+
+### Organisation
+
+```
+src/index.html, style.css, app.js   la page (HTML, styles, logique : blocs, webcam, port série, téléversement)
+firmware/ia_arduino_recepteur/      programme Arduino (.ino) : récepteur de commandes série
+firmware/ia_arduino_recepteur.hex   version compilée (Uno), embarquée dans la page pour le bouton « Téléverser »
+build.mjs                           assemble tout dans dist/ia-arduino.html
+tests/                              tests automatisés (blocs, simulation, téléversement avec fausse carte, firmware)
+CLAUDE.md                           notes pour les futures sessions de développement avec Claude Code
+```
+
+## Licences des bibliothèques intégrées
+
+Blockly, TensorFlow.js et Teachable Machine (Apache 2.0), JSZip (MIT ou GPLv3). Choisir une licence pour ce dépôt avant tout partage public.
