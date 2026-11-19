@@ -1,6 +1,6 @@
 // Assemble la page unique dist/ia-arduino.html :
 //   src/index.html + src/style.css + src/app.js + bibliothèques (node_modules) + firmware (.hex).
-import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdirSync, copyFileSync } from 'node:fs';
 
 const lire = (chemin) => readFileSync(new URL(chemin, import.meta.url), 'utf8');
 const echapperScript = (s) => s.replace(/<\/script/gi, '<\\/script');
@@ -37,3 +37,7 @@ console.log('dist/ia-arduino.html écrit (' + Math.round(page.length / 1024) + '
 mkdirSync(new URL('./site/', import.meta.url), { recursive: true });
 writeFileSync(new URL('./site/index.html', import.meta.url), page);
 console.log('site/index.html écrit (copie à envoyer sur l\'hébergement)');
+
+// Programme d'enregistrement des exercices (PHP) : à envoyer à côté de index.html.
+for (const f of ['api.php', '.htaccess']) copyFileSync(new URL('./serveur/' + f, import.meta.url), new URL('./site/' + f, import.meta.url));
+console.log('site/api.php et site/.htaccess copiés');

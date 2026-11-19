@@ -19,7 +19,7 @@
     derniere: 0,
     stream: null,
     port: null, writer: null, reader: null, lecture: null, deconnexionVoulue: false,
-    lectures: {}, alerteLecture: false, running: false, frameFn: null, execution: 0, codeCourant: { starts: [], frame: '' }, idBoucle: 0, cameraPerdue: false, enRelance: false, derniereCamera: null, minuterieCamera: null, codeDemarrage: '', codeImage: '',
+    lectures: {}, alerteLecture: false, running: false, frameFn: null, execution: 0, codeCourant: { starts: [], frame: '' }, idBoucle: 0, cleSauvegarde: 'ia-arduino-programme', exercice: null, exerciceEnEdition: null, api: { disponible: false, connecte: false }, modeleUrl: '', cameraPerdue: false, enRelance: false, derniereCamera: null, minuterieCamera: null, codeDemarrage: '', codeImage: '',
     cache: {}
   };
 
@@ -866,19 +866,30 @@
     }
     majBoutons();
   }
+  // Chargement d'un modèle Teachable Machine par son adresse (finie par « / »).
+  // « window.__tests » : crochet réservé aux tests automatiques (faux modèle, sans Internet).
+  const chargeurModele = (u) => (window.__tests && window.__tests.chargerModele)
+    ? window.__tests.chargerModele(u)
+    : window.tmImage.load(u + 'model.json', u + 'metadata.json');
+  async function chargerModeleDepuis(u) {
+    journal('Chargement du modèle…', 'info');
+    puce('puceModele', 'Modèle : chargement…', 'attente');
+    try {
+      const m = await chargeurModele(u);
+      state.modeleUrl = u;
+      await activerModele(m, u);
+      return true;
+    } catch (e) {
+      puce('puceModele', 'Modèle : erreur', 'erreur');
+      journal('Impossible de charger le modèle : ' + e.message + '. Vérifie le lien (il doit finir par /) et la connexion Internet, ou utilise les fichiers exportés.', 'err');
+      return false;
+    }
+  }
   async function chargerUrl() {
     let u = $('modelUrl').value.trim();
     if (!u) { journal('Colle d\'abord le lien du modèle.', 'err'); return; }
     if (!u.endsWith('/')) u += '/';
-    journal('Chargement du modèle…', 'info');
-    puce('puceModele', 'Modèle : chargement…', 'attente');
-    try {
-      const m = await window.tmImage.load(u + 'model.json', u + 'metadata.json');
-      await activerModele(m, u);
-    } catch (e) {
-      puce('puceModele', 'Modèle : erreur', 'erreur');
-      journal('Impossible de charger le modèle : ' + e.message + '. Vérifie le lien (il doit finir par /) et la connexion Internet, ou utilise les fichiers exportés.', 'err');
-    }
+    await chargerModeleDepuis(u);
   }
   async function chargerFichiers(liste) {
     let f = Array.from(liste);
@@ -1125,7 +1136,7 @@
     Blockly.serialization.workspaces.load(migrer(donnees.blocs), ws);
   }
   function sauvegardeAuto() {
-    try { localStorage.setItem('ia-arduino-programme', JSON.stringify({ version: 1, classes: state.connues, blocs: Blockly.serialization.workspaces.save(ws) })); }
+    try { localStorage.setItem(state.cleSauvegarde, JSON.stringify({ version: 1, classes: state.connues, blocs: Blockly.serialization.workspaces.save(ws), modifie: state.exercice ? state.exercice.modifie : undefined })); }
     catch (e) { /* stockage indisponible : sans importance */ }
   }
   let minuterieSauvegarde = null, minuterieModification = null;
@@ -1157,11 +1168,38 @@
   $('btnDemarrer').addEventListener('click', demarrer);
   $('btnArreter').addEventListener('click', arreter);
   $('btnEnregistrer').addEventListener('click', enregistrer);
+  $('btnExporterExercice').addEventListener('click', ouvrirDialogueExercice);
+  $('btnMesExercices').addEventListener('click', ouvrirMesExercices);
+  $('btnBalise').addEventListener('click', () => { if (state.exerciceEnEdition && state.exerciceEnEdition.id) ouvrirBalise(state.exerciceEnEdition); });
+  $('balFermer').addEventListener('click', () => $('dlgBalise').close());
+  $('balCopier').addEventListener('click', async () => {
+    try { await navigator.clipboard.writeText($('balTexte').value); $('balMessage').textContent = 'Balise copiée : colle-la dans ta page.'; }
+    catch (e) { $('balTexte').select(); $('balMessage').textContent = 'Copie automatique impossible : la balise est sélectionnée, fais Ctrl+C.'; }
+  });
+  $('mxFermer').addEventListener('click', () => $('dlgMesExercices').close());
+  $('mxConnexion').addEventListener('submit', (e) => { e.preventDefault(); connexionSite(); });
+  $('mxNouveau').addEventListener('click', () => { $('dlgMesExercices').close(); ouvrirDialogueExercice(); });
+  $('mxDeconnexion').addEventListener('click', async () => {
+    try { await appelApi('deconnexion', {}); } catch (e) { /* sans importance */ }
+    state.api.connecte = false; majBoutonsApi();
+    $('mxContenu').style.display = 'none'; $('mxConnexion').style.display = 'block';
+    $('mxMessage').textContent = 'Tu es déconnecté.';
+  });
+  $('btnEnregistrerSite').addEventListener('click', () => enregistrerSurSite(false));
+  $('btnFermerExercice').addEventListener('click', () => $('dlgExercice').close());
+  $('exTitre').addEventListener('input', () => { if (!$('exId').dataset.modifie) $('exId').value = fabriquerId($('exTitre').value); });
+  $('exId').addEventListener('input', () => { $('exId').dataset.modifie = '1'; });
+  $('formExercice').addEventListener('submit', (e) => { e.preventDefault(); creerFichierExercice(); });
+  $('btnRecommencer').addEventListener('click', recommencerExercice);
   $('btnOuvrir').addEventListener('click', () => $('fichierProgramme').click());
   $('fichierProgramme').addEventListener('change', async (e) => {
     const f = e.target.files[0]; e.target.value = '';
     if (!f) return;
-    try { chargerDonnees(JSON.parse(await f.text())); journal('Programme ouvert : ' + f.name, 'info'); }
+    try {
+      const donnees = JSON.parse(await f.text());
+      if (donnees && donnees.format === EXERCICE_FORMAT) { ouvrirExerciceFichier(donnees); return; }
+      chargerDonnees(donnees); journal('Programme ouvert : ' + f.name, 'info');
+    }
     catch (err) { journal("Ce fichier n'est pas un programme valide : " + err.message, 'err'); }
   });
   $('btnTout').addEventListener('click', () => {
@@ -1171,16 +1209,290 @@
   $('btnEffacerJournal').addEventListener('click', () => { $('journal').innerHTML = ''; });
   window.addEventListener('beforeunload', () => { if (state.running) arreter(); });
 
+  /* ---------- Exercices : fichier .json, mode élève (?exercice=nom) ---------- */
+  const EXERCICE_FORMAT = 'bloc-lab-exercice';
+  const ID_EXERCICE = /^[a-z0-9-]{1,60}$/;
+  const exerciceValide = (ex) => !!ex && ex.format === EXERCICE_FORMAT && ex.version === 1
+    && typeof ex.titre === 'string' && !!ex.blocs && typeof ex.blocs === 'object';
+  function fabriquerId(titre) {
+    return String(titre).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60);
+  }
+  // Côté enseignant : fabriquer le fichier de l'exercice à partir de l'espace de travail.
+  function ouvrirDialogueExercice() {
+    const e = state.exerciceEnEdition || {};
+    $('exTitre').value = e.titre || '';
+    $('exId').value = e.id || '';
+    $('exId').dataset.modifie = e.id ? '1' : '';
+    $('exConsigne').value = e.consigne || '';
+    $('exModele').value = e.modeleUrl || state.modeleUrl || '';
+    $('exResultat').style.display = 'none';
+    $('exResultatSite').style.display = 'none';
+    $('exMessageSite').textContent = '';
+    majBoutonsApi();
+    $('dlgExercice').showModal();
+  }
+  // Lit le formulaire et fabrique l'exercice (ou null si un champ est invalide).
+  function lireFormulaireExercice() {
+    const id = $('exId').value.trim();
+    if (!ID_EXERCICE.test(id)) { $('exId').setCustomValidity('Lettres minuscules, chiffres et tirets seulement.'); $('exId').reportValidity(); return null; }
+    $('exId').setCustomValidity('');
+    let url = $('exModele').value.trim();
+    if (url && !/^https?:\/\//.test(url)) { journal('Le lien du modèle doit commencer par https://', 'err'); $('exModele').focus(); return null; }
+    if (url && !url.endsWith('/')) url += '/';
+    return {
+      format: EXERCICE_FORMAT, version: 1, id: id, titre: $('exTitre').value.trim(), consigne: $('exConsigne').value.trim(),
+      modele: url ? { url: url } : null, classes: state.connues.slice(),
+      blocs: Blockly.serialization.workspaces.save(ws), modifie: new Date().toISOString()
+    };
+  }
+  function baliseIframe(id, titre, base) {
+    const titreHtml = String(titre).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+    return '<iframe src="' + base + '?exercice=' + id + '" title="' + titreHtml + '" allow="serial; camera" style="width:100%; height:90vh; border:0"></iframe>';
+  }
+  // Fenêtre « Balise iframe » : le code à coller dans la page du site, pour l'exercice ouvert.
+  function ouvrirBalise(e) {
+    const surSite = location.protocol !== 'file:';
+    $('balTexte').value = baliseIframe(e.id, e.titre, surSite ? adresseOutil() : 'https://VOTRE-SITE/atelier-blocs/');
+    $('balMessage').textContent = 'Exercice « ' + e.titre + ' ». ' + (surSite ? '' : "Remplace VOTRE-SITE par l'adresse de ton site. ") + 'Colle cette balise dans la page où les élèves doivent le voir :';
+    $('dlgBalise').showModal();
+  }
+  function majBoutonBalise() {
+    const e = state.exerciceEnEdition;
+    $('btnBalise').style.display = e && e.id ? '' : 'none';
+  }
+  // Adresse de l'outil sans ce qui suit le « ? » ni « index.html ».
+  const adresseOutil = () => location.href.split(/[?#]/)[0].replace(/index\.html$/, '');
+  function creerFichierExercice() {
+    const ex = lireFormulaireExercice();
+    if (!ex) return;
+    const lien = document.createElement('a');
+    lien.href = URL.createObjectURL(new Blob([JSON.stringify(ex, null, 1)], { type: 'application/json' }));
+    lien.download = ex.id + '.json';
+    document.body.appendChild(lien); lien.click(); lien.remove();
+    setTimeout(() => URL.revokeObjectURL(lien.href), 2000);
+    state.exerciceEnEdition = { id: ex.id, titre: ex.titre, consigne: ex.consigne, modeleUrl: ex.modele ? ex.modele.url : '' };
+    $('exBalise').value = baliseIframe(ex.id, ex.titre, 'https://VOTRE-SITE/atelier-blocs/');
+    $('exFichier').textContent = 'exercices/' + ex.id + '.json';
+    $('exResultatSite').style.display = 'none';
+    $('exResultat').style.display = 'block';
+    majBoutonBalise();
+    journal('Exercice exporté : ' + ex.id + '.json', 'info');
+  }
+
+  /* ---------- Enregistrement sur le site (api.php) ---------- */
+  async function appelApi(action, corps) {
+    if (location.protocol === 'file:') throw new Error('hors site');
+    const opt = { credentials: 'same-origin', cache: 'no-store', headers: { 'X-Requested-With': 'bloc-lab' } };
+    if (corps !== undefined) { opt.method = 'POST'; opt.headers['Content-Type'] = 'application/json'; opt.body = JSON.stringify(corps); }
+    const r = await fetch(new URL('api.php?action=' + action, location.href), opt);
+    let d = null;
+    try { d = await r.json(); } catch (e) { /* pas de réponse JSON */ }
+    if (!d || typeof d.ok !== 'boolean') throw new Error('api indisponible');
+    return Object.assign({ statut: r.status }, d);
+  }
+  function majBoutonsApi() {
+    $('btnEnregistrerSite').style.display = state.api.connecte ? '' : 'none';
+  }
+  async function verifierApi() {
+    try {
+      const d = await appelApi('etat');
+      state.api.disponible = !!d.configure;
+      state.api.connecte = !!d.connecte;
+    } catch (e) { state.api.disponible = false; state.api.connecte = false; }
+    majBoutonsApi();
+    return state.api;
+  }
+  async function ouvrirMesExercices() {
+    $('mxMessage').textContent = '';
+    $('mxConnexion').style.display = 'none';
+    $('mxContenu').style.display = 'none';
+    $('dlgMesExercices').showModal();
+    await verifierApi();
+    let etat = null;
+    try { etat = await appelApi('etat'); } catch (e) { /* api absente */ }
+    if (!etat) {
+      $('mxMessage').textContent = "Cette fonction marche seulement sur ton site, avec le fichier api.php à côté de index.html (voir le README). Tu peux toujours utiliser « Exporter comme exercice » pour télécharger un fichier.";
+    } else if (!etat.configure) {
+      $('mxMessage').textContent = "api.php est bien là, mais il manque le fichier config.php (ton mot de passe). Lance « npm run mot-de-passe » sur ton PC, puis envoie site/config.php à côté de index.html.";
+    } else if (!etat.connecte) {
+      $('mxMessage').textContent = 'Entre ton mot de passe enseignant.';
+      $('mxConnexion').style.display = 'block';
+      $('mxMdp').focus();
+    } else {
+      await afficherListeExercices();
+    }
+  }
+  async function connexionSite() {
+    $('mxMessage').textContent = 'Connexion…';
+    try {
+      const d = await appelApi('connexion', { motdepasse: $('mxMdp').value });
+      $('mxMdp').value = '';
+      if (!d.ok) { $('mxMessage').textContent = d.erreur || 'Connexion impossible.'; return; }
+      state.api.connecte = true; majBoutonsApi();
+      $('mxConnexion').style.display = 'none';
+      await afficherListeExercices();
+    } catch (e) { $('mxMessage').textContent = "Impossible de joindre api.php : " + e.message; }
+  }
+  async function afficherListeExercices() {
+    $('mxContenu').style.display = 'block';
+    $('mxMessage').textContent = '';
+    const ul = $('mxListe');
+    ul.textContent = '';
+    let d;
+    try { d = await appelApi('liste'); } catch (e) { $('mxMessage').textContent = 'Liste impossible : ' + e.message; return; }
+    if (!d.ok) {
+      if (d.statut === 401) { state.api.connecte = false; majBoutonsApi(); $('mxContenu').style.display = 'none'; $('mxConnexion').style.display = 'block'; }
+      $('mxMessage').textContent = d.erreur || 'Liste impossible.'; return;
+    }
+    if (!d.exercices.length) { $('mxMessage').textContent = "Aucun exercice enregistré pour l'instant."; return; }
+    d.exercices.forEach((e) => {
+      const li = document.createElement('li');
+      const nom = document.createElement('span');
+      const t = document.createElement('b'); t.textContent = e.titre;
+      const i = document.createElement('small'); i.textContent = ' ' + e.id + (e.modifie ? ' — ' + e.modifie.slice(0, 10) : '');
+      nom.append(t, i);
+      li.appendChild(nom);
+      const actions = document.createElement('span');
+      [['Ouvrir', () => ouvrirDepuisSite(e.id)], ['Dupliquer', () => dupliquerSurSite(e.id)], ['Balise iframe', () => { $('dlgMesExercices').close(); ouvrirBalise(e); }], ['Supprimer', () => supprimerSurSite(e)]].forEach(([texte, f]) => {
+        const b = document.createElement('button'); b.type = 'button'; b.className = 'mini'; b.textContent = texte;
+        b.addEventListener('click', f); actions.appendChild(b);
+      });
+      li.appendChild(actions);
+      ul.appendChild(li);
+    });
+  }
+  async function lireExerciceSite(id) {
+    const r = await fetch(new URL('exercices/' + id + '.json', location.href), { cache: 'no-store' });
+    if (!r.ok) throw new Error('erreur ' + r.status);
+    const ex = await r.json();
+    if (!exerciceValide(ex)) throw new Error('fichier invalide');
+    return ex;
+  }
+  async function ouvrirDepuisSite(id) {
+    try {
+      const ex = await lireExerciceSite(id);
+      ouvrirExerciceFichier(ex);
+      $('dlgMesExercices').close();
+    } catch (e) { $('mxMessage').textContent = "Impossible d'ouvrir l'exercice : " + e.message; }
+  }
+  async function dupliquerSurSite(id) {
+    try {
+      const ex = await lireExerciceSite(id);
+      const existants = (await appelApi('liste')).exercices.map((x) => x.id);
+      let nouveau = (id + '-copie').slice(0, 60), n = 2;
+      while (existants.includes(nouveau)) nouveau = (id.slice(0, 54) + '-copie-' + n++);
+      ex.id = nouveau; ex.titre = ('Copie de ' + ex.titre).slice(0, 120);
+      const d = await appelApi('enregistrer', { exercice: ex, modifieAttendu: null });
+      if (!d.ok) { $('mxMessage').textContent = d.erreur || 'Duplication impossible.'; return; }
+      journal('Exercice dupliqué : ' + nouveau, 'info');
+      await afficherListeExercices();
+    } catch (e) { $('mxMessage').textContent = 'Duplication impossible : ' + e.message; }
+  }
+  async function supprimerSurSite(e) {
+    if (!confirm('Supprimer l\'exercice « ' + e.titre + ' » ? Les élèves ne pourront plus l\'ouvrir. (Une copie reste dans la corbeille du site.)')) return;
+    try {
+      const d = await appelApi('supprimer', { id: e.id });
+      if (!d.ok) { $('mxMessage').textContent = d.erreur || 'Suppression impossible.'; return; }
+      journal('Exercice supprimé : ' + e.id, 'info');
+      await afficherListeExercices();
+    } catch (err) { $('mxMessage').textContent = 'Suppression impossible : ' + err.message; }
+  }
+  async function enregistrerSurSite(ecraser) {
+    const ex = lireFormulaireExercice();
+    if (!ex) return;
+    const enEdition = state.exerciceEnEdition || {};
+    const attendu = enEdition.id === ex.id && enEdition.modifie ? enEdition.modifie : null;
+    $('exMessageSite').textContent = 'Enregistrement…';
+    let d;
+    try { d = await appelApi('enregistrer', { exercice: ex, modifieAttendu: attendu, ecraser: !!ecraser }); }
+    catch (e) { $('exMessageSite').textContent = "Impossible de joindre le site : " + e.message; return; }
+    if (d.statut === 409 && d.conflit) {
+      if (confirm('Cet exercice a été modifié ailleurs depuis que tu l\'as ouvert. Remplacer quand même la version du site ? (L\'ancienne version est gardée.)')) return enregistrerSurSite(true);
+      $('exMessageSite').textContent = 'Enregistrement annulé.'; return;
+    }
+    if (d.statut === 401) { state.api.connecte = false; majBoutonsApi(); $('exMessageSite').textContent = 'Tu n\'es plus connecté : ouvre « Mes exercices » et reconnecte-toi.'; return; }
+    if (!d.ok) { $('exMessageSite').textContent = d.erreur || 'Enregistrement impossible.'; return; }
+    state.exerciceEnEdition = { id: ex.id, titre: ex.titre, consigne: ex.consigne, modeleUrl: ex.modele ? ex.modele.url : '', modifie: d.modifie };
+    $('exMessageSite').textContent = 'Enregistré sur ton site : exercices/' + ex.id + '.json';
+    $('exBaliseSite').value = baliseIframe(ex.id, ex.titre, adresseOutil());
+    $('exResultat').style.display = 'none';
+    $('exResultatSite').style.display = 'block';
+    majBoutonBalise();
+    journal('Exercice enregistré sur le site : ' + ex.id, 'info');
+  }
+  // Côté enseignant : rouvrir un exercice pour le modifier.
+  function ouvrirExerciceFichier(ex) {
+    if (!exerciceValide(ex)) { journal("Ce fichier n'est pas un exercice valide.", 'err'); return; }
+    chargerDonnees({ classes: ex.classes || [], blocs: ex.blocs });
+    state.exerciceEnEdition = { id: ex.id || '', titre: ex.titre, consigne: ex.consigne || '', modeleUrl: (ex.modele && ex.modele.url) || '', modifie: ex.modifie || '' };
+    if (ex.modele && ex.modele.url) $('modelUrl').value = ex.modele.url;
+    majBoutonBalise();
+    journal('Exercice ouvert : « ' + ex.titre + ' ». Modifie-le, puis clique sur « Exporter comme exercice ».', 'info');
+  }
+  // Côté élève : la page est ouverte avec ?exercice=nom.
+  async function demarrerModeExercice(id) {
+    document.body.classList.add('mode-exercice');
+    if (!ID_EXERCICE.test(id)) { alerte("Le nom de l'exercice n'est pas valide."); return; }
+    if (location.protocol === 'file:') { alerte("Les exercices fonctionnent depuis un site (adresse https), pas depuis un fichier ouvert sur l'ordinateur."); return; }
+    let ex;
+    try {
+      const r = await fetch(new URL('exercices/' + id + '.json', location.href), { cache: 'no-store' });
+      if (!r.ok) throw new Error('erreur ' + r.status);
+      ex = await r.json();
+    } catch (e) { alerte('Cet exercice est introuvable. Vérifie le lien.'); journal('Exercice introuvable : ' + e.message, 'err'); return; }
+    if (!exerciceValide(ex)) { alerte("Ce fichier n'est pas un exercice valide."); return; }
+    state.exercice = ex;
+    state.cleSauvegarde = 'ia-arduino-exercice-' + id;
+    document.title = ex.titre;
+    $('exTitreAff').textContent = ex.titre;
+    $('exConsigneAff').textContent = ex.consigne || '';
+    $('bandeauExercice').style.display = 'block';
+    let depart = { classes: ex.classes || [], blocs: ex.blocs };
+    try {
+      const sauve = JSON.parse(localStorage.getItem(state.cleSauvegarde) || 'null');
+      if (sauve && sauve.blocs) {
+        if (sauve.modifie === ex.modifie) depart = sauve;
+        else journal("L'exercice a été mis à jour : le programme de départ est rechargé.", 'info');
+      }
+    } catch (e) { /* rien à restaurer */ }
+    chargerDonnees(depart);
+    let u = '';
+    if (ex.modele && ex.modele.dossier) u = new URL('exercices/' + id + '/', location.href).href;
+    else if (ex.modele && /^https?:\/\//.test(ex.modele.url || '')) u = ex.modele.url.endsWith('/') ? ex.modele.url : ex.modele.url + '/';
+    if (u) {
+      document.body.classList.add('modele-fourni');
+      if (!(await chargerModeleDepuis(u))) {
+        document.body.classList.remove('modele-fourni');
+        alerte("Le modèle n'a pas pu être chargé. Vérifie la connexion Internet ou charge-le toi-même dans l'étape 2.");
+      }
+    }
+  }
+  function recommencerExercice() {
+    if (!state.exercice) return;
+    if (ws.getAllBlocks(false).length && !confirm('Recommencer avec le programme de départ ? Tes changements seront perdus.')) return;
+    if (state.running) arreter();
+    try { localStorage.removeItem(state.cleSauvegarde); } catch (e) { /* sans importance */ }
+    chargerDonnees({ classes: state.exercice.classes || [], blocs: state.exercice.blocs });
+    journal('Programme de départ rechargé.', 'info');
+  }
+
   /* ---------- Démarrage : restauration du dernier programme ---------- */
-  try {
-    const sauve = JSON.parse(localStorage.getItem('ia-arduino-programme') || 'null');
-    if (sauve && sauve.blocs) chargerDonnees(sauve);
-  } catch (e) { /* rien à restaurer */ }
+  const idExercice = new URLSearchParams(location.search).get('exercice');
+  if (idExercice !== null) {
+    demarrerModeExercice(idExercice);
+  } else {
+    if (location.protocol !== 'file:') verifierApi();
+    try {
+      const sauve = JSON.parse(localStorage.getItem(state.cleSauvegarde) || 'null');
+      if (sauve && sauve.blocs) chargerDonnees(sauve);
+    } catch (e) { /* rien à restaurer */ }
+  }
   recompiler();
   majPuceCarte();
   journal('Bienvenue ! Étape 1 : connecte la carte. Étape 2 : charge le modèle. Étape 3 : assemble les blocs, puis clique sur Démarrer.', 'info');
 
   // Accès pour les tests automatiques
   window.iaArduino = {
-    conseilIframe, dansIframe, migrer, activerModele, state, ws, compiler, texteCode, ai, out, demarrer, arreter, simuler, activerTest, insererExemple, insererExemple2 };
+    conseilIframe, dansIframe, migrer, activerModele, fabriquerId, verifierApi, state, ws, compiler, texteCode, ai, out, demarrer, arreter, simuler, activerTest, insererExemple, insererExemple2 };
 })();

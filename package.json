@@ -7,7 +7,8 @@
   "scripts": {
     "build": "node build.mjs",
     "test": "node build.mjs && node --test \"tests/*.test.mjs\"",
-    "firmware": "node scripts/compile-firmware.mjs"
+    "firmware": "node scripts/compile-firmware.mjs",
+    "mot-de-passe": "node scripts/mot-de-passe.mjs"
   },
   "dependencies": {
     "@teachablemachine/image": "0.8.5",

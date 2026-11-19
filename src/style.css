@@ -72,3 +72,21 @@
     aside { overflow: visible; }
     #blocklyDiv { min-height: 480px; }
   }
+
+  #btnRecommencer { display: none; }
+  body.mode-exercice #btnRecommencer { display: inline-block; }
+  body.mode-exercice #btnEnregistrer, body.mode-exercice #btnExporterExercice, body.mode-exercice #btnMesExercices, body.mode-exercice #btnBalise, body.mode-exercice label.fichier, body.mode-exercice #btnTout { display: none; }
+  body.modele-fourni #carteModele { display: none; }
+  #bandeauExercice { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: var(--rayon); padding: 10px 14px; margin-bottom: 8px; }
+  #bandeauExercice h2 { margin: 0 0 4px; font-size: 17px; }
+  #bandeauExercice p { margin: 0; white-space: pre-wrap; }
+  dialog { border: 1px solid var(--gris-200); border-radius: 12px; padding: 16px 18px; width: min(560px, 92vw); }
+  dialog h2 { margin: 0 0 10px; font-size: 17px; }
+  dialog label { display: block; font-size: 13px; margin-top: 10px; }
+  dialog textarea, dialog input[type=text] { display: block; width: 100%; box-sizing: border-box; font: inherit; padding: 7px 9px; border: 1px solid var(--gris-200); border-radius: 8px; margin-top: 3px; }
+
+  #mxListe { list-style: none; margin: 10px 0 0; padding: 0; }
+  #mxListe li { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px; align-items: center; padding: 8px 0; border-top: 1px solid var(--gris-200); }
+  #mxListe small { color: var(--gris-600); }
+  #mxListe span:last-child { display: flex; gap: 4px; flex-wrap: wrap; }
+  dialog input[type=password] { display: block; width: 100%; box-sizing: border-box; font: inherit; padding: 7px 9px; border: 1px solid var(--gris-200); border-radius: 8px; margin-top: 3px; }

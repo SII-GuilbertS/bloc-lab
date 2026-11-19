@@ -46,7 +46,7 @@
     </ol>
   </div>
 
-  <div class="carte">
+  <div class="carte" id="carteModele">
     <h2><span class="num">2</span> Modèle Teachable Machine</h2>
     <p class="aide" style="margin-top:0"><b>Option A — Télécharge ton modèle</b> (export de Vittascience ou de Teachable Machine) :</p>
     <input type="file" id="fichiersModele" multiple accept=".zip,.json,.bin">
@@ -82,11 +82,19 @@
 </aside>
 
 <section class="espace">
+  <div id="bandeauExercice" style="display:none">
+    <h2 id="exTitreAff"></h2>
+    <p id="exConsigneAff"></p>
+  </div>
   <div class="barre-outils">
     <button type="button" class="vert" id="btnDemarrer" disabled>▶ Démarrer</button>
     <button type="button" class="rouge" id="btnArreter" disabled>■ Arrêter</button>
     <span class="espace-flex"></span>
     <button type="button" id="btnEnregistrer">Enregistrer</button>
+    <button type="button" id="btnMesExercices">Mes exercices</button>
+    <button type="button" id="btnExporterExercice">Exporter comme exercice</button>
+    <button type="button" id="btnBalise" style="display:none" title="Récupérer le code iframe de cet exercice">&lt;/&gt; Balise iframe</button>
+    <button type="button" id="btnRecommencer">↺ Recommencer</button>
     <label class="fichier"><button type="button" id="btnOuvrir">Ouvrir…</button></label>
     <input type="file" id="fichierProgramme" accept=".json" style="display:none">
     <button type="button" id="btnTout">Tout effacer</button>
@@ -103,6 +111,47 @@
   </details>
 </section>
 </main>
+
+<dialog id="dlgMesExercices">
+  <h2>Mes exercices</h2>
+  <p class="aide" id="mxMessage"></p>
+  <form id="mxConnexion" style="display:none">
+    <label>Mot de passe enseignant<input type="password" id="mxMdp" autocomplete="current-password" required></label>
+    <div class="ligne" style="margin-top:8px"><button type="submit" class="principal">Se connecter</button></div>
+  </form>
+  <div id="mxContenu" style="display:none">
+    <div class="ligne"><button type="button" class="principal" id="mxNouveau">Enregistrer l'exercice actuel…</button><button type="button" class="mini" id="mxDeconnexion">Se déconnecter</button></div>
+    <ul id="mxListe"></ul>
+  </div>
+  <div class="ligne" style="margin-top:10px"><button type="button" id="mxFermer">Fermer</button></div>
+</dialog>
+
+<dialog id="dlgBalise">
+  <h2>Balise iframe</h2>
+  <p class="aide" id="balMessage"></p>
+  <textarea id="balTexte" rows="5" readonly onclick="this.select()"></textarea>
+  <div class="ligne" style="margin-top:10px"><button type="button" class="principal" id="balCopier">Copier la balise</button><button type="button" id="balFermer">Fermer</button></div>
+</dialog>
+
+<dialog id="dlgExercice">
+  <form method="dialog" id="formExercice">
+    <h2>Exporter comme exercice</h2>
+    <label>Titre<input type="text" id="exTitre" required maxlength="80"></label>
+    <label>Nom du fichier (lettres minuscules, chiffres, tirets)<input type="text" id="exId" required maxlength="60" pattern="[a-z0-9\-]{1,60}"></label>
+    <label>Consigne pour les élèves<textarea id="exConsigne" rows="4" maxlength="1500"></textarea></label>
+    <label>Lien du modèle Teachable Machine (facultatif)<input type="text" id="exModele" placeholder="https://teachablemachine.withgoogle.com/models/XXXXXXX/"></label>
+    <div class="ligne"><button type="button" class="principal" id="btnEnregistrerSite" style="display:none">Enregistrer sur mon site</button><button type="submit">Télécharger le fichier</button><button type="button" id="btnFermerExercice">Fermer</button></div>
+    <p class="aide" id="exMessageSite"></p>
+    <div id="exResultatSite" style="display:none">
+      <p class="aide">Les élèves peuvent déjà l'ouvrir. Colle cette balise dans ta page :</p>
+      <textarea id="exBaliseSite" rows="4" readonly onclick="this.select()"></textarea>
+    </div>
+    <div id="exResultat" style="display:none">
+      <p class="aide">1. Là où se trouve <b>index.html</b> sur ton site, crée un dossier <b>exercices</b> (s'il n'existe pas déjà).<br>2. Mets-y le fichier téléchargé : <b id="exFichier"></b><br>3. Colle cette balise dans ta page (remplace VOTRE-SITE) :</p>
+      <textarea id="exBalise" rows="4" readonly onclick="this.select()"></textarea>
+    </div>
+  </form>
+</dialog>
 
 <footer>
   Fonctionne dans Chrome ou Edge sur ordinateur. Les bibliothèques sont intégrées à cette page : Internet n'est nécessaire que pour charger un modèle depuis son lien.

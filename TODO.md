@@ -1,5 +1,13 @@
 # À faire
 
+## Exercices enregistrés sur OVH (en cours)
+- [x] Étape 1 : format d'exercice, mode élève `?exercice=`, export `.json` (fichier envoyé à la main).
+- [x] Étape 2 : `api.php` (PHP 8) + connexion enseignant + « Mes exercices » (liste, ouvrir, enregistrer, dupliquer, supprimer) + balise iframe copiable. **À tester sur OVH** (dossier de test) : https, droits d'écriture, `.htaccess`.
+- [ ] Étape 3 : fichiers du modèle envoyés avec l'exercice (hors ligne). Le mode élève sait déjà lire `modele: { dossier: true }`.
+- [ ] Étape 4 : envoi FTP (`index.html`, `api.php`, `.htaccess`, jamais `config.php` ni `exercices/`) et script de création du mot de passe.
+- [ ] Étape 5 (plus tard) : plusieurs enseignants.
+- [x] Pas de brouillons (décision de Sylvain).
+
 ## Déploiement par FTP (`npm run deploy`)
 Idée : envoyer `site/index.html` sur OVH (`www/atelier-blocs/`) en une commande, après les tests.
 
