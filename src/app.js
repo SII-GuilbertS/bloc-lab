@@ -19,7 +19,7 @@
     derniere: 0,
     stream: null,
     port: null, writer: null, reader: null, lecture: null, deconnexionVoulue: false,
-    lectures: {}, alerteLecture: false, running: false, frameFn: null, execution: 0, codeCourant: { starts: [], frame: '' }, codeDemarrage: '', codeImage: '',
+    lectures: {}, alerteLecture: false, running: false, frameFn: null, execution: 0, codeCourant: { starts: [], frame: '' }, idBoucle: 0, cameraPerdue: false, enRelance: false, derniereCamera: null, minuterieCamera: null, codeDemarrage: '', codeImage: '',
     cache: {}
   };
 
@@ -760,8 +760,11 @@
   async function demarrerCamera(deviceId) {
     arreterCamera();
     const contraintes = { audio: false, video: deviceId ? { deviceId: { exact: deviceId } } : { width: { ideal: 640 }, height: { ideal: 480 } } };
-    state.stream = await navigator.mediaDevices.getUserMedia(contraintes);
-    video.srcObject = state.stream;
+    const flux = await navigator.mediaDevices.getUserMedia(contraintes);
+    state.stream = flux;
+    state.derniereCamera = flux.getVideoTracks()[0].getSettings().deviceId || deviceId || null;
+    flux.getVideoTracks().forEach((t) => t.addEventListener('ended', () => cameraPerdue(flux)));
+    video.srcObject = flux;
     await video.play();
     try {
       const periph = (await navigator.mediaDevices.enumerateDevices()).filter((d) => d.kind === 'videoinput');
@@ -777,13 +780,54 @@
       $('ligneCamera').style.display = periph.length > 1 ? 'flex' : 'none';
     } catch (e) { /* la liste des caméras est facultative */ }
   }
+  // Caméra débranchée : on le dit, puis on réessaie toute seule (et le bouton ↻ permet de réessayer à la main).
+  function cameraPerdue(flux) {
+    if (flux !== state.stream || state.cameraPerdue) return;
+    state.cameraPerdue = true;
+    state.analyse = false;
+    state.preds = {}; state.top = '';
+    majBarres();
+    $('apercu').classList.remove('actif');
+    $('apercuVide').textContent = 'La webcam est débranchée. Rebranche-la : elle redémarre toute seule (ou clique sur ↻).';
+    $('btnRelancerCamera').style.display = '';
+    $('btnRelancerCamera').classList.add('alerte-cam');
+    journal('La webcam a été débranchée. Rebranche-la : elle redémarrera toute seule.', 'err');
+    planifierRelance(2500);
+  }
+  function planifierRelance(delai) {
+    clearTimeout(state.minuterieCamera);
+    if (state.cameraPerdue && state.model) state.minuterieCamera = setTimeout(() => relancerCamera(false), delai);
+  }
+  async function relancerCamera(manuel) {
+    if (!state.model || state.enRelance) return;
+    state.enRelance = true;
+    clearTimeout(state.minuterieCamera);
+    try {
+      try { await demarrerCamera(state.derniereCamera || undefined); }
+      catch (e) { await demarrerCamera(); }   // l'ancienne caméra n'existe plus : on prend celle par défaut
+      state.cameraPerdue = false;
+      $('apercu').classList.add('actif');
+      $('btnRelancerCamera').classList.remove('alerte-cam');
+      journal('Webcam relancée.', 'info');
+      lancerAnalyse();
+    } catch (e) {
+      if (manuel) journal("La webcam n'est pas encore disponible : " + e.message, 'err');
+      planifierRelance(3000);
+    }
+    state.enRelance = false;
+  }
   function arreterCamera() {
     state.analyse = false;
     if (state.stream) { state.stream.getTracks().forEach((t) => t.stop()); state.stream = null; }
     video.srcObject = null;
   }
-  async function boucleAnalyse() {
-    if (!state.analyse) return;
+  function lancerAnalyse() {
+    state.analyse = true;
+    state.idBoucle += 1;
+    boucleAnalyse(state.idBoucle);
+  }
+  async function boucleAnalyse(id) {
+    if (!state.analyse || id !== state.idBoucle) return;
     dessinerImage();
     const t = performance.now();
     if (state.model && !state.occupe && t - state.derniere >= 100) {
@@ -800,7 +844,7 @@
       } catch (e) { journal('Erreur de reconnaissance : ' + e.message, 'err'); }
       state.occupe = false;
     }
-    requestAnimationFrame(boucleAnalyse);
+    requestAnimationFrame(() => boucleAnalyse(id));
   }
   async function activerModele(modele, nom) {
     state.model = modele;
@@ -813,9 +857,10 @@
       await demarrerCamera();
       $('apercu').classList.add('actif');
       $('aideGuide').style.display = 'block';
-      state.analyse = true;
-      boucleAnalyse();
+      lancerAnalyse();
+      $('btnRelancerCamera').style.display = '';
     } catch (e) {
+      $('btnRelancerCamera').style.display = '';
       journal("Webcam inaccessible : " + e.message + ". Autorise la caméra dans le navigateur." + conseilIframe(e), 'err');
       alerte("La webcam n'a pas pu être activée. Autorise l'accès à la caméra, puis recharge le modèle.");
     }
@@ -871,6 +916,9 @@
     const liste = $('classesTest').value.split(',').map((s) => s.trim()).filter(Boolean);
     if (liste.length < 2) { journal('Saisis au moins deux classes séparées par des virgules.', 'err'); return; }
     arreterCamera();
+    clearTimeout(state.minuterieCamera);
+    state.cameraPerdue = false;
+    $('btnRelancerCamera').style.display = 'none';
     state.model = null;
     state.testMode = true;
     $('apercu').classList.remove('actif');
@@ -1099,9 +1147,13 @@
   $('fichiersModele').addEventListener('change', (e) => { if (e.target.files.length) chargerFichiers(e.target.files); e.target.value = ''; });
   $('btnTest').addEventListener('click', activerTest);
   $('choixCamera').addEventListener('change', async (e) => {
-    try { await demarrerCamera(e.target.value); state.analyse = true; boucleAnalyse(); }
+    try { await demarrerCamera(e.target.value); lancerAnalyse(); }
     catch (err) { journal('Changement de caméra impossible : ' + err.message, 'err'); }
   });
+  $('btnRelancerCamera').addEventListener('click', () => relancerCamera(true));
+  if (navigator.mediaDevices && navigator.mediaDevices.addEventListener) {
+    navigator.mediaDevices.addEventListener('devicechange', () => { if (state.cameraPerdue) planifierRelance(800); });
+  }
   $('btnDemarrer').addEventListener('click', demarrer);
   $('btnArreter').addEventListener('click', arreter);
   $('btnEnregistrer').addEventListener('click', enregistrer);
@@ -1130,5 +1182,5 @@
 
   // Accès pour les tests automatiques
   window.iaArduino = {
-    conseilIframe, dansIframe, migrer, state, ws, compiler, texteCode, ai, out, demarrer, arreter, simuler, activerTest, insererExemple, insererExemple2 };
+    conseilIframe, dansIframe, migrer, activerModele, state, ws, compiler, texteCode, ai, out, demarrer, arreter, simuler, activerTest, insererExemple, insererExemple2 };
 })();
