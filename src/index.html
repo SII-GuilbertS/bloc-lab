@@ -38,12 +38,17 @@
         <option value="57600">Arduino Nano (ancien bootloader)</option>
       </select>
     </details>
-    <p class="aide">Branche la carte en USB. Première utilisation : clique d'abord sur « Téléverser le programme dans la carte » (une seule fois par carte). Ferme tout autre logiciel qui utilise la carte (Arduino IDE, Vittascience…). Sans carte, le programme tourne quand même en simulation.</p>
+    <ol class="etapes">
+      <li>Branche la carte en USB.</li>
+      <li>Ferme les autres logiciels (Arduino IDE…).</li>
+      <li>Clique sur « Téléverser » (une seule fois).</li>
+      <li>Clique sur « Connecter la carte ».</li>
+    </ol>
   </div>
 
   <div class="carte">
     <h2><span class="num">2</span> Modèle Teachable Machine</h2>
-    <p class="aide" style="margin-top:0"><b>Option A — modèle téléchargé</b> (sans Internet) : dans Teachable Machine, « Exporter le modèle » → TensorFlow.js → « Télécharger ». Choisis ici le fichier <code>.zip</code> obtenu, ou les 3 fichiers décompressés (<code>model.json</code>, <code>metadata.json</code>, <code>weights.bin</code>).</p>
+    <p class="aide" style="margin-top:0"><b>Option A — Télécharge ton modèle</b> (export de Vittascience ou de Teachable Machine) :</p>
     <input type="file" id="fichiersModele" multiple accept=".zip,.json,.bin">
     <p class="aide"><b>Option B — lien du modèle</b> (Internet nécessaire) :</p>
     <input type="text" id="modelUrl" placeholder="https://teachablemachine.withgoogle.com/models/XXXXXXX/" aria-label="Lien du modèle">
@@ -74,22 +79,6 @@
     <div id="barres"></div>
   </div>
 
-  <div class="carte">
-    <h2>Journal</h2>
-    <div id="journal" aria-live="polite"></div>
-    <div class="ligne" style="margin-top:8px"><button type="button" class="mini" id="btnEffacerJournal">Effacer le journal</button></div>
-  </div>
-
-  <div class="carte">
-    <h2>Programme Arduino (pour les curieux)</h2>
-    <p class="aide">Voici le programme que le bouton « Téléverser » installe dans la carte. Tu peux aussi le copier dans l'Arduino IDE.</p>
-    <details>
-      <summary>Afficher le programme Arduino</summary>
-      <div class="ligne" style="margin-top:8px"><button type="button" class="mini" id="btnCopierIno">Copier le programme</button></div>
-      <pre id="inoCode">__INO__</pre>
-    </details>
-  </div>
-
 </aside>
 
 <section class="espace">
@@ -106,6 +95,11 @@
   <details id="codeGenere">
     <summary>Voir le code généré par les blocs (pour les curieux)</summary>
     <pre id="codeAffiche"></pre>
+  </details>
+  <details id="journalDetails">
+    <summary>Journal (pour les curieux)</summary>
+    <div id="journal" aria-live="polite"></div>
+    <div class="ligne" style="margin-top:8px"><button type="button" class="mini" id="btnEffacerJournal">Effacer le journal</button></div>
   </details>
 </section>
 </main>

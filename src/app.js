@@ -34,6 +34,7 @@
     zone.appendChild(ligne);
     while (zone.children.length > 120) zone.removeChild(zone.firstChild);
     zone.scrollTop = zone.scrollHeight;
+    if (type === 'err') $('journalDetails').open = true;   // une erreur ouvre le journal
   }
   function puce(id, texte, classe) {
     const e = $(id);
@@ -1116,15 +1117,6 @@
     ws.clear();
   });
   $('btnEffacerJournal').addEventListener('click', () => { $('journal').innerHTML = ''; });
-  $('btnCopierIno').addEventListener('click', async () => {
-    const texte = $('inoCode').textContent;
-    try { await navigator.clipboard.writeText(texte); journal('Programme Arduino copié dans le presse-papiers.', 'info'); }
-    catch (e) {
-      const sel = window.getSelection(); const r = document.createRange();
-      r.selectNodeContents($('inoCode')); sel.removeAllRanges(); sel.addRange(r);
-      journal('Sélection faite : fais Ctrl+C pour copier.', 'info');
-    }
-  });
   window.addEventListener('beforeunload', () => { if (state.running) arreter(); });
 
   /* ---------- Démarrage : restauration du dernier programme ---------- */

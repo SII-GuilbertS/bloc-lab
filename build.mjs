@@ -1,5 +1,5 @@
 // Assemble la page unique dist/ia-arduino.html :
-//   src/index.html + src/style.css + src/app.js + bibliothèques (node_modules) + firmware (.ino et .hex).
+//   src/index.html + src/style.css + src/app.js + bibliothèques (node_modules) + firmware (.hex).
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 
 const lire = (chemin) => readFileSync(new URL(chemin, import.meta.url), 'utf8');
@@ -20,16 +20,13 @@ const bibliotheques = {
   '/*__FR__*/': nm + 'blockly/msg/fr.js'
 };
 
-const ino = lire('./firmware/ia_arduino_recepteur/ia_arduino_recepteur.ino');
 const hex = lire('./firmware/ia_arduino_recepteur.hex').replace(/`/g, '');
-const html = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
 let page = lire('./src/index.html');
 page = remplacer(page, '/*__STYLE__*/', lire('./src/style.css'));
 for (const [marque, fichier] of Object.entries(bibliotheques)) {
   page = remplacer(page, marque, echapperScript(lire(fichier)));
 }
-page = remplacer(page, '__INO__', html(ino));
 page = remplacer(page, '/*__APP__*/', echapperScript(remplacer(lire('./src/app.js'), '__HEX__', hex)));
 
 mkdirSync(new URL('./dist/', import.meta.url), { recursive: true });

@@ -180,3 +180,26 @@ test("la catégorie « Démarrage » n'existe plus et « Événements » contien
   const blocs = await page.evaluate(() => window.iaArduino.ws.getFlyout().getWorkspace().getTopBlocks().map((b) => b.type));
   assert.deepEqual(blocs, ['evt_start']);
 });
+
+test("colonne de gauche simplifiée : 4 étapes, option A reformulée, plus de journal ni de programme Arduino", async () => {
+  const { page } = ctx;
+  const etapes = await page.$$eval('aside .etapes li', (l) => l.map((e) => e.textContent));
+  assert.equal(etapes.length, 4);
+  etapes.forEach((e) => assert.ok(e.split(/\s+/).length <= 9, 'étape trop longue : ' + e));
+  const aside = await page.innerText('aside');
+  assert.match(aside, /Télécharge ton modèle/);
+  assert.match(aside, /Vittascience ou de Teachable Machine/);
+  assert.match(aside, /Option B/);
+  assert.doesNotMatch(aside, /Journal|Programme Arduino|\.zip/);
+  assert.equal(await page.$('aside #journal'), null);
+  assert.equal(await page.$('aside #inoCode'), null);
+  assert.equal(await page.$('#journalDetails #journal') !== null, true);
+});
+
+test("une erreur ouvre automatiquement le journal replié", async () => {
+  const { page } = ctx;
+  await effacerEtTest(page);
+  await page.evaluate(() => { document.getElementById('journalDetails').open = false; });
+  await page.evaluate(() => window.iaArduino.demarrer());   // rien à exécuter : message d'erreur
+  assert.equal(await page.evaluate(() => document.getElementById('journalDetails').open), true);
+});
