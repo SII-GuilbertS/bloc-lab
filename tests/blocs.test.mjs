@@ -117,3 +117,24 @@ test("les noms de classe sont conservés dans les listes déroulantes", async ()
   const classes = await page.evaluate(() => window.iaArduino.state.connues);
   assert.ok(classes.includes('classe A') && classes.includes('classe B'));
 });
+
+test("modifier le programme pendant qu'il tourne : la nouvelle version prend le relais sans arrêter", async () => {
+  const { page } = ctx;
+  await effacerEtTest(page);
+  await page.evaluate(() => window.iaArduino.insererExemple2());
+  await page.click('#btnDemarrer');
+  await attendre(900);
+  assert.match(await journal(page), /L,13,1/);
+  // On change la broche 13 en 12 sur tous les blocs LED, sans arrêter le programme.
+  await page.evaluate(() => window.iaArduino.ws.getAllBlocks(false).filter((b) => b.type === 'ard_led').forEach((b) => b.setFieldValue('12', 'PIN')));
+  await attendre(1500);
+  const avant = (await journal(page)).split('\n').length;
+  assert.equal(await page.innerText('#puceProgramme'), 'Programme : en cours');
+  const j = await journal(page);
+  assert.match(j, /Programme modifié/);
+  assert.match(j, /L,12,1/, 'la nouvelle broche clignote');
+  const apres = j.slice(j.indexOf('Programme modifié'));
+  assert.doesNotMatch(apres, /L,13,/, "l'ancienne version ne commande plus la broche 13");
+  await page.click('#btnArreter');
+  assert.ok(avant > 0);
+});
