@@ -45,6 +45,26 @@ Les broches D0 et D1 sont volontairement absentes : elles servent à la liaison 
 
 **Vérifié :** les tests ouvrent la page dans une iframe `allow="serial; camera"` (adresse locale) : elle se charge sans erreur et Web Serial y est disponible. **À vérifier chez vous :** la connexion à la vraie carte et la webcam depuis votre site réel en https.
 
+## Exercices pour les élèves (`?exercice=nom`)
+
+Un **exercice** est un petit fichier `.json` : titre, consigne, modèle, programme de départ.
+
+**Créer un exercice (enseignant)**
+1. Prépare le programme de départ avec les blocs, et charge le modèle par son lien si tu veux qu'il soit fourni aux élèves.
+2. Clique sur **« Exporter comme exercice »** : titre, nom du fichier, consigne, lien du modèle (facultatif).
+3. Un fichier `nom.json` est téléchargé. La fenêtre donne aussi la **balise iframe** à copier.
+4. Envoie `nom.json` dans le dossier `exercices/` à côté de `index.html` sur ton site (`www/atelier-blocs/exercices/nom.json`).
+5. Pour le modifier plus tard : **« Ouvrir… »** avec ce fichier, modifie, puis exporte de nouveau avec le même nom.
+
+**Ce que voit l'élève** en ouvrant `https://ton-site/atelier-blocs/?exercice=nom` (ou la balise iframe) :
+- la consigne, le modèle déjà chargé, le programme de départ prêt ;
+- pas de bouton d'enregistrement ni d'export, mais un bouton « ↺ Recommencer » ;
+- sa progression est gardée dans son navigateur, **séparément pour chaque exercice** ; si tu mets l'exercice à jour, le programme de départ est rechargé.
+
+Le nom d'un exercice ne contient que des lettres minuscules, des chiffres et des tirets. Un exercice ne s'ouvre pas depuis un simple fichier sur l'ordinateur : il faut un site (https).
+
+**Vérifié :** les tests utilisent un faux site local et un faux modèle. **À vérifier chez toi :** le chargement d'un exercice sur ton OVH en https, avec ton vrai modèle Teachable Machine et la vraie carte.
+
 ## Développement
 
 Prérequis : Node.js 20+.
