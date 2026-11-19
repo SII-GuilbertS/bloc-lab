@@ -13,6 +13,7 @@ Page web unique **en français** pour programmer une Arduino par blocs (Blockly)
 - `src/app.js` (une IIFE) : blocs personnalisés, générateur JS, exécution asynchrone, webcam + `tmImage`, port série, téléversement STK500, exemples, sauvegarde.
 - Le programme des blocs est compilé en fonctions **async** : chaque boucle reçoit `await out.tick()` (`INFINITE_LOOP_TRAP`), `attendre` = `await out.wait(s)`, la lecture = `await out.read(pin)`. L'arrêt lève la valeur `STOP`.
 - Blocs « au démarrage » = exécutés une fois (en parallèle s'il y en a plusieurs) ; « à chaque image » = boucle toutes les 100 ms. Un programme sans boucle se termine seul et laisse ses sorties telles quelles.
+- **Modification en direct** : si les blocs changent pendant l'exécution (300 ms après), `appliquerModification()` relance la nouvelle version sans arrêter. Chaque lancement a son `out` (`creerOut(id)`) : l'ancienne version se coupe seule (`STOP`) et n'envoie plus de commandes. Les sorties déjà allumées gardent leur état (pas de coupure). Seule une boucle « à chaque image » modifiée est échangée à chaud, sans relance.
 - Protocole série (115200 bauds, une ligne par commande) : `L,pin,0|1`, `S,pin,0..180`, `P,pin,0..255`, `R,pin,0` → réponse `R,pin,0|1`, `?` → `PRET`. Les commandes d'écriture ne sont envoyées que si la valeur change (cache `state.cache`).
 - `window.iaArduino` expose l'état et des fonctions pour les tests.
 

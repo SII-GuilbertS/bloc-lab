@@ -19,7 +19,7 @@
     derniere: 0,
     stream: null,
     port: null, writer: null, reader: null, lecture: null, deconnexionVoulue: false,
-    lectures: {}, alerteLecture: false, running: false, frameFn: null, execution: 0,
+    lectures: {}, alerteLecture: false, running: false, frameFn: null, execution: 0, codeCourant: { starts: [], frame: '' }, codeDemarrage: '', codeImage: '',
     cache: {}
   };
 
@@ -298,27 +298,31 @@
       journal(cmd + '   (simulation, carte non connectée)', 'sim');
     }
   }
-  function sortie(cle, cmd) {
-    if (!state.running) return;
+  function sortie(vivant, cle, cmd) {
+    if (!vivant()) return;   // ancienne version du programme : n'envoie plus rien
     if (state.cache[cle] === cmd) return;   // n'envoie que les changements
     state.cache[cle] = cmd;
     envoyer(cmd);
   }
   const STOP = { arret: true };
   const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
-  const out = {
-    led: (pin, on) => sortie('L' + pin, 'L,' + pin + ',' + (on ? 1 : 0)),
-    servo: (pin, a) => sortie('S' + pin, 'S,' + pin + ',' + clamp(Math.round(Number(a) || 0), 0, 180)),
-    pwm: (pin, v) => sortie('P' + pin, 'P,' + pin + ',' + clamp(Math.round(Number(v) || 0), 0, 255)),
+  // Une « sortie » par lancement du programme : quand on modifie les blocs pendant l'exécution,
+  // l'ancienne version s'arrête toute seule (son numéro n'est plus le bon) et la nouvelle prend le relais.
+  const creerOut = (id) => {
+  const vivant = () => state.running && state.execution === id;
+  return {
+    led: (pin, on) => sortie(vivant, 'L' + pin, 'L,' + pin + ',' + (on ? 1 : 0)),
+    servo: (pin, a) => sortie(vivant, 'S' + pin, 'S,' + pin + ',' + clamp(Math.round(Number(a) || 0), 0, 180)),
+    pwm: (pin, v) => sortie(vivant, 'P' + pin, 'P,' + pin + ',' + clamp(Math.round(Number(v) || 0), 0, 255)),
     read: async (pin) => {
-      if (!state.running) throw STOP;
+      if (!vivant()) throw STOP;
       if (!state.writer) { return 0; }   // simulation : aucune carte, la broche est lue à 0
       const valeur = await new Promise((resolve) => {
         (state.lectures[pin] = state.lectures[pin] || []).push(resolve);
         state.writer.write(encodeur.encode('R,' + pin + ',0\n')).catch(() => resolve(null));
         setTimeout(() => resolve(null), 700);
       });
-      if (!state.running) throw STOP;
+      if (!vivant()) throw STOP;
       if (valeur === null) {
         if (!state.alerteLecture) {
           state.alerteLecture = true;
@@ -328,14 +332,17 @@
       }
       return valeur;
     },
-    tick: async () => { await sleep(50); if (!state.running) throw STOP; },
+    tick: async () => { await sleep(50); if (!vivant()) throw STOP; },
     wait: async (s) => {
       const fin = Date.now() + Math.max(0, Number(s) || 0) * 1000;
-      while (Date.now() < fin) { await sleep(Math.min(50, Math.max(1, fin - Date.now()))); if (!state.running) throw STOP; }
-      if (!state.running) throw STOP;
+      while (Date.now() < fin) { await sleep(Math.min(50, Math.max(1, fin - Date.now()))); if (!vivant()) throw STOP; }
+      if (!vivant()) throw STOP;
     },
-    log: (t) => { if (state.cache['T'] !== t) { state.cache['T'] = t; journal('Programme : ' + t, 'prog'); } }
+    log: (t) => { if (vivant() && state.cache['T'] !== t) { state.cache['T'] = t; journal('Programme : ' + t, 'prog'); } }
   };
+  };
+  let out = creerOut(0);
+
   const ai = {
     is: (c, seuil) => (state.preds[c] || 0) * 100 >= seuil,
     conf: (c) => Math.round((state.preds[c] || 0) * 100),
@@ -802,8 +809,8 @@
     arreter();
     journal('Erreur dans le programme : ' + (e && e.message ? e.message : e), 'err');
   }
-  async function boucleImage() {
-    while (state.running && state.frameFn) {
+  async function boucleImage(id) {
+    while (state.running && state.execution === id && state.frameFn) {
       try { await state.frameFn(ai, out); } catch (e) { erreurProgramme(e); return; }
       await sleep(100);
     }
@@ -826,14 +833,22 @@
       fonctions = c.starts.map((x) => new AsyncFunction('ai', 'out', x));
       state.frameFn = c.frame.trim() ? new AsyncFunction('ai', 'out', c.frame) : null;
     } catch (e) { journal('Le programme est invalide : ' + e.message, 'err'); return; }
+    state.codeCourant = c;
     state.cache = {};
     state.alerteLecture = false;
     state.running = true;
-    state.execution += 1;
-    const id = state.execution;
+    lancer(fonctions);
     puce('puceProgramme', 'Programme : en cours', 'ok');
     journal('Programme démarré' + (state.writer ? '.' : ' (simulation : aucune carte connectée).'), 'info');
     majBoutons();
+  }
+  // Lance les blocs « au démarrage » et la boucle « à chaque image » (nouveau numéro d'exécution).
+  function lancer(fonctions) {
+    state.execution += 1;
+    const id = state.execution;
+    out = creerOut(id);
+    state.codeDemarrage = state.codeCourant.starts.join('|--|');
+    state.codeImage = state.codeCourant.frame;
     let restants = fonctions.length;
     fonctions.forEach((f) => {
       f(ai, out).then(() => {
@@ -841,7 +856,27 @@
         if (restants === 0 && !state.frameFn && state.execution === id) terminer();
       }, erreurProgramme);
     });
-    if (state.frameFn) boucleImage();
+    if (state.frameFn) boucleImage(id);
+  }
+  // Modification des blocs pendant que le programme tourne : prise en compte tout de suite.
+  function appliquerModification() {
+    if (!state.running) return;
+    const c = recompiler();
+    state.codeCourant = c;
+    const demarrageChange = c.starts.join('|--|') !== state.codeDemarrage;
+    const imageChange = c.frame !== state.codeImage;
+    if (!demarrageChange && !imageChange) return;
+    let fonctions, frameFn;
+    try {
+      fonctions = c.starts.map((x) => new AsyncFunction('ai', 'out', x));
+      frameFn = c.frame.trim() ? new AsyncFunction('ai', 'out', c.frame) : null;
+    } catch (e) { return; }   // programme incomplet : on garde l'ancienne version jusqu'à la prochaine modification
+    const debutImage = !!frameFn && !state.frameFn;
+    state.frameFn = frameFn;
+    if (!demarrageChange && !debutImage) { state.codeImage = c.frame; return; }   // seule la boucle d'image change : échange à chaud
+    if (!frameFn && !c.starts.some((x) => x.trim())) return;
+    lancer(fonctions);
+    journal('Programme modifié : nouvelle version lancée.', 'info');
   }
   function arreter() {
     if (!state.running) return;
@@ -911,15 +946,14 @@
     try { localStorage.setItem('ia-arduino-programme', JSON.stringify({ version: 1, classes: state.connues, blocs: Blockly.serialization.workspaces.save(ws) })); }
     catch (e) { /* stockage indisponible : sans importance */ }
   }
-  let minuterieSauvegarde = null;
+  let minuterieSauvegarde = null, minuterieModification = null;
   ws.addChangeListener((e) => {
     if (e.isUiEvent) return;
     clearTimeout(minuterieSauvegarde);
     minuterieSauvegarde = setTimeout(sauvegardeAuto, 400);
-    const c = recompiler();
-    if (state.running && state.frameFn) {
-      try { state.frameFn = new AsyncFunction('ai', 'out', c.frame); } catch (err) { /* sera signalé au prochain démarrage */ }
-    }
+    recompiler();
+    clearTimeout(minuterieModification);
+    minuterieModification = setTimeout(appliquerModification, 300);
   });
 
   /* ---------- Liaison des boutons ---------- */
