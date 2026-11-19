@@ -96,6 +96,12 @@ test("enseignant : connexion, enregistrer, rouvrir, modifier, dupliquer, supprim
     await page.click('#mxListe li >> text=Ouvrir');
     await page.waitForFunction(() => window.iaArduino.ws.getAllBlocks(false).length > 0);
 
+    // Exercice rouvert : le bouton « Balise iframe » est là et donne le code.
+    assert.equal(await page.isVisible('#btnBalise'), true);
+    await page.click('#btnBalise');
+    assert.equal(await page.inputValue('#balTexte'), '<iframe src="' + site.url + '?exercice=le-clignotant" title="Le clignotant" allow="serial; camera" style="width:100%; height:90vh; border:0"></iframe>');
+    await page.click('#balFermer');
+
     // Modifier puis enregistrer de nouveau (même nom : pas de conflit, une version est gardée).
     await page.evaluate(() => window.iaArduino.ws.getAllBlocks(false).find((b) => b.type === 'ard_led').setFieldValue('9', 'PIN'));
     await page.click('#btnExporterExercice');
@@ -126,6 +132,11 @@ test("enseignant : connexion, enregistrer, rouvrir, modifier, dupliquer, supprim
     await page.waitForFunction(() => document.querySelectorAll('#mxListe li').length === 2);
     assert.ok(existsSync(site.dir + '/exercices/le-clignotant-copie.json'));
     assert.match(JSON.parse(site.lire('exercices/le-clignotant-copie.json')).titre, /^Copie de /);
+    await page.click('#mxListe li:has-text("le-clignotant-copie") >> text=Balise iframe');
+    assert.match(await page.inputValue('#balTexte'), /\?exercice=le-clignotant-copie"/);
+    await page.click('#balFermer');
+    await page.click('#btnMesExercices');
+    await page.waitForSelector('#mxListe li');
     await page.click('#mxListe li:has-text("le-clignotant-copie") >> text=Supprimer');
     await page.waitForFunction(() => document.querySelectorAll('#mxListe li').length === 1);
     assert.equal(existsSync(site.dir + '/exercices/le-clignotant-copie.json'), false);
@@ -133,7 +144,7 @@ test("enseignant : connexion, enregistrer, rouvrir, modifier, dupliquer, supprim
 
     // Déconnexion : la liste n'est plus accessible, le bouton d'enregistrement disparaît.
     await page.click('#mxDeconnexion');
-    assert.equal(await page.isVisible('#mxConnexion'), true);
+    await page.waitForSelector('#mxConnexion', { state: 'visible' });
     await page.click('#mxFermer');
     await page.click('#btnExporterExercice');
     assert.equal(await page.isVisible('#btnEnregistrerSite'), false);

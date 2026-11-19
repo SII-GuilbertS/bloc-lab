@@ -1170,6 +1170,12 @@
   $('btnEnregistrer').addEventListener('click', enregistrer);
   $('btnExporterExercice').addEventListener('click', ouvrirDialogueExercice);
   $('btnMesExercices').addEventListener('click', ouvrirMesExercices);
+  $('btnBalise').addEventListener('click', () => { if (state.exerciceEnEdition && state.exerciceEnEdition.id) ouvrirBalise(state.exerciceEnEdition); });
+  $('balFermer').addEventListener('click', () => $('dlgBalise').close());
+  $('balCopier').addEventListener('click', async () => {
+    try { await navigator.clipboard.writeText($('balTexte').value); $('balMessage').textContent = 'Balise copiée : colle-la dans ta page.'; }
+    catch (e) { $('balTexte').select(); $('balMessage').textContent = 'Copie automatique impossible : la balise est sélectionnée, fais Ctrl+C.'; }
+  });
   $('mxFermer').addEventListener('click', () => $('dlgMesExercices').close());
   $('mxConnexion').addEventListener('submit', (e) => { e.preventDefault(); connexionSite(); });
   $('mxNouveau').addEventListener('click', () => { $('dlgMesExercices').close(); ouvrirDialogueExercice(); });
@@ -1244,6 +1250,17 @@
     const titreHtml = String(titre).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
     return '<iframe src="' + base + '?exercice=' + id + '" title="' + titreHtml + '" allow="serial; camera" style="width:100%; height:90vh; border:0"></iframe>';
   }
+  // Fenêtre « Balise iframe » : le code à coller dans la page du site, pour l'exercice ouvert.
+  function ouvrirBalise(e) {
+    const surSite = location.protocol !== 'file:';
+    $('balTexte').value = baliseIframe(e.id, e.titre, surSite ? adresseOutil() : 'https://VOTRE-SITE/atelier-blocs/');
+    $('balMessage').textContent = 'Exercice « ' + e.titre + ' ». ' + (surSite ? '' : "Remplace VOTRE-SITE par l'adresse de ton site. ") + 'Colle cette balise dans la page où les élèves doivent le voir :';
+    $('dlgBalise').showModal();
+  }
+  function majBoutonBalise() {
+    const e = state.exerciceEnEdition;
+    $('btnBalise').style.display = e && e.id ? '' : 'none';
+  }
   // Adresse de l'outil sans ce qui suit le « ? » ni « index.html ».
   const adresseOutil = () => location.href.split(/[?#]/)[0].replace(/index\.html$/, '');
   function creerFichierExercice() {
@@ -1259,6 +1276,7 @@
     $('exFichier').textContent = 'exercices/' + ex.id + '.json';
     $('exResultatSite').style.display = 'none';
     $('exResultat').style.display = 'block';
+    majBoutonBalise();
     journal('Exercice exporté : ' + ex.id + '.json', 'info');
   }
 
@@ -1336,7 +1354,7 @@
       nom.append(t, i);
       li.appendChild(nom);
       const actions = document.createElement('span');
-      [['Ouvrir', () => ouvrirDepuisSite(e.id)], ['Dupliquer', () => dupliquerSurSite(e.id)], ['Balise iframe', () => copierBalise(e)], ['Supprimer', () => supprimerSurSite(e)]].forEach(([texte, f]) => {
+      [['Ouvrir', () => ouvrirDepuisSite(e.id)], ['Dupliquer', () => dupliquerSurSite(e.id)], ['Balise iframe', () => { $('dlgMesExercices').close(); ouvrirBalise(e); }], ['Supprimer', () => supprimerSurSite(e)]].forEach(([texte, f]) => {
         const b = document.createElement('button'); b.type = 'button'; b.className = 'mini'; b.textContent = texte;
         b.addEventListener('click', f); actions.appendChild(b);
       });
@@ -1380,11 +1398,6 @@
       await afficherListeExercices();
     } catch (err) { $('mxMessage').textContent = 'Suppression impossible : ' + err.message; }
   }
-  async function copierBalise(e) {
-    const texte = baliseIframe(e.id, e.titre, adresseOutil());
-    try { await navigator.clipboard.writeText(texte); $('mxMessage').textContent = 'Balise copiée : colle-la dans ta page.'; }
-    catch (err) { $('mxMessage').textContent = 'Copie impossible. Sélectionne et copie : ' + texte; }
-  }
   async function enregistrerSurSite(ecraser) {
     const ex = lireFormulaireExercice();
     if (!ex) return;
@@ -1405,6 +1418,7 @@
     $('exBaliseSite').value = baliseIframe(ex.id, ex.titre, adresseOutil());
     $('exResultat').style.display = 'none';
     $('exResultatSite').style.display = 'block';
+    majBoutonBalise();
     journal('Exercice enregistré sur le site : ' + ex.id, 'info');
   }
   // Côté enseignant : rouvrir un exercice pour le modifier.
@@ -1413,6 +1427,7 @@
     chargerDonnees({ classes: ex.classes || [], blocs: ex.blocs });
     state.exerciceEnEdition = { id: ex.id || '', titre: ex.titre, consigne: ex.consigne || '', modeleUrl: (ex.modele && ex.modele.url) || '', modifie: ex.modifie || '' };
     if (ex.modele && ex.modele.url) $('modelUrl').value = ex.modele.url;
+    majBoutonBalise();
     journal('Exercice ouvert : « ' + ex.titre + ' ». Modifie-le, puis clique sur « Exporter comme exercice ».', 'info');
   }
   // Côté élève : la page est ouverte avec ?exercice=nom.

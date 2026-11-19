@@ -93,6 +93,7 @@
     <button type="button" id="btnEnregistrer">Enregistrer</button>
     <button type="button" id="btnMesExercices">Mes exercices</button>
     <button type="button" id="btnExporterExercice">Exporter comme exercice</button>
+    <button type="button" id="btnBalise" style="display:none" title="Récupérer le code iframe de cet exercice">&lt;/&gt; Balise iframe</button>
     <button type="button" id="btnRecommencer">↺ Recommencer</button>
     <label class="fichier"><button type="button" id="btnOuvrir">Ouvrir…</button></label>
     <input type="file" id="fichierProgramme" accept=".json" style="display:none">
@@ -123,6 +124,13 @@
     <ul id="mxListe"></ul>
   </div>
   <div class="ligne" style="margin-top:10px"><button type="button" id="mxFermer">Fermer</button></div>
+</dialog>
+
+<dialog id="dlgBalise">
+  <h2>Balise iframe</h2>
+  <p class="aide" id="balMessage"></p>
+  <textarea id="balTexte" rows="5" readonly onclick="this.select()"></textarea>
+  <div class="ligne" style="margin-top:10px"><button type="button" class="principal" id="balCopier">Copier la balise</button><button type="button" id="balFermer">Fermer</button></div>
 </dialog>
 
 <dialog id="dlgExercice">

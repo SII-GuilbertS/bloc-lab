@@ -75,7 +75,7 @@
 
   #btnRecommencer { display: none; }
   body.mode-exercice #btnRecommencer { display: inline-block; }
-  body.mode-exercice #btnEnregistrer, body.mode-exercice #btnExporterExercice, body.mode-exercice #btnMesExercices, body.mode-exercice label.fichier, body.mode-exercice #btnTout { display: none; }
+  body.mode-exercice #btnEnregistrer, body.mode-exercice #btnExporterExercice, body.mode-exercice #btnMesExercices, body.mode-exercice #btnBalise, body.mode-exercice label.fichier, body.mode-exercice #btnTout { display: none; }
   body.modele-fourni #carteModele { display: none; }
   #bandeauExercice { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: var(--rayon); padding: 10px 14px; margin-bottom: 8px; }
   #bandeauExercice h2 { margin: 0 0 4px; font-size: 17px; }
