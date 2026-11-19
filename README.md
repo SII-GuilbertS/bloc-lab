@@ -40,8 +40,23 @@ Les tests pilotent un vrai navigateur. Si Playwright n'a pas de navigateur, indi
 
 ```bash
 CHROME_PATH="/chemin/vers/chrome" npm test          # Linux / macOS
-set CHROME_PATH=C:\Program Files\Google\Chrome\Application\chrome.exe && npm test   # Windows
 ```
+
+Sous Windows : si Chrome est installé normalement, `npm test` suffit (vérifié sur le PC de Sylvain, 12 tests réussis). Sinon, indiquer le chemin de Chrome ou d'Edge :
+
+```powershell
+# PowerShell
+$env:CHROME_PATH = "C:\Program Files\Google\Chrome\Application\chrome.exe"; npm test
+# ou avec Edge
+$env:CHROME_PATH = "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"; npm test
+```
+
+```bat
+:: Invite de commandes (cmd)
+set CHROME_PATH=C:\Program Files\Google\Chrome\Application\chrome.exe && npm test
+```
+
+Les fins de ligne sont gérées par `.gitattributes` (le fichier `.hex` reste en LF).
 
 ### Organisation
 
