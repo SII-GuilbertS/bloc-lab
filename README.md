@@ -17,11 +17,13 @@ Sans carte ni webcam, le « mode test » simule la reconnaissance et affiche les
 
 | Catégorie | Blocs |
 |---|---|
-| Démarrage | « au démarrage » (une fois), « à chaque image de la webcam » |
-| Boucles | « répéter pour toujours », répéter n fois, répéter tant que, sortir de la boucle, attendre n secondes |
-| IA | « l'IA reconnaît … à plus de … % », « confiance de … », « classe la plus probable » |
-| Arduino | écrire état haut (1) / bas (0) sur D2–D13, lire l'état de la broche, servomoteur (0–180°), sortie PWM, écrire dans le journal |
-| Logique / Maths / Texte | si / sinon, comparaisons, et / ou / non, nombres, calculs, texte |
+| Événements (jaune) | « quand le programme démarre » (les blocs dessous s'exécutent une fois) |
+| Contrôle (orange) | répéter indéfiniment, répéter n fois, répéter tant que, sortir de la boucle, attendre n secondes, si / alors, si / alors / sinon |
+| IA (violet) | « l'IA reconnaît … à plus de … % », « confiance de … », « classe la plus probable » |
+| Arduino (bleu) | mettre la broche D2–D13 à haut / bas, lire l'état de la broche, servomoteur (0–180°), sortie PWM, écrire dans le journal |
+| Opérateurs (vert) | comparaisons, et / ou / non, vrai / faux, nombres, calculs, texte |
+
+Les blocs ont l'allure de ceux de mBlock. Les anciens programmes enregistrés sont convertis automatiquement (« au démarrage » devient « quand le programme démarre »). L'ancien bloc « à chaque image de la webcam » n'est plus proposé, mais il fonctionne encore dans un ancien programme.
 
 Les broches D0 et D1 sont volontairement absentes : elles servent à la liaison USB.
 

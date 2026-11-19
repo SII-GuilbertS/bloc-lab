@@ -56,10 +56,10 @@ test("un programme sans boucle se termine seul et garde ses sorties", async () =
   const { page } = ctx;
   await effacerEtTest(page);
   const servo = { type: 'ard_servo', fields: { PIN: '9' }, inputs: { ANGLE: nombre(45) } };
-  const repeter = { type: 'controls_repeat_ext', inputs: { TIMES: nombre(3), DO: { block: servo } } };
+  const repeter = { type: 'ctrl_repeter', inputs: { TIMES: nombre(3), DO: { block: servo } } };
   const pause = { type: 'ia_wait', inputs: { SEC: nombre(0.2) }, next: { block: repeter } };
   const led = { type: 'ard_led', fields: { PIN: '4', ETAT: '1' }, next: { block: pause } };
-  await charger(page, { type: 'ia_start', inputs: { DO: { block: led } } });
+  await charger(page, { type: 'evt_start', next: { block: led } });
   await page.click('#btnDemarrer');
   await attendre(900);
   assert.equal(await page.innerText('#puceProgramme'), 'Programme : terminé');
@@ -75,12 +75,12 @@ test("bloc « lire l'état de la broche » : lecture envoyée à la carte et val
   const condition = { type: 'logic_compare', fields: { OP: 'EQ' }, inputs: {
     A: { block: { type: 'ard_lire', fields: { PIN: '5' } } },
     B: { block: { type: 'math_number', fields: { NUM: 1 } } } } };
-  const si = { type: 'controls_if', extraState: { hasElse: true }, inputs: {
-    IF0: { block: condition },
-    DO0: { block: { type: 'ard_led', fields: { PIN: '13', ETAT: '1' } } },
+  const si = { type: 'ctrl_si_sinon', inputs: {
+    COND: { block: condition },
+    DO: { block: { type: 'ard_led', fields: { PIN: '13', ETAT: '1' } } },
     ELSE: { block: { type: 'ard_led', fields: { PIN: '13', ETAT: '0' } } } } };
   const boucle = { type: 'ia_forever', inputs: { DO: { block: si } } };
-  await charger(page, { type: 'ia_start', inputs: { DO: { block: boucle } } });
+  await charger(page, { type: 'evt_start', next: { block: boucle } });
   assert.match(await compiler(page), /await out\.read\(5\) == 1/);
   // Fausse liaison : répond à « R,broche,0 » avec la valeur window.__v.
   await page.evaluate(() => {
@@ -107,7 +107,7 @@ test("bloc « lire l'état de la broche » : lecture envoyée à la carte et val
 test("le bloc LED génère « état haut / état bas »", async () => {
   const { page } = ctx;
   await effacerEtTest(page);
-  await charger(page, { type: 'ia_start', inputs: { DO: { block: { type: 'ard_led', fields: { PIN: '3', ETAT: '0' } } } } });
+  await charger(page, { type: 'evt_start', next: { block: { type: 'ard_led', fields: { PIN: '3', ETAT: '0' } } } });
   assert.match(await compiler(page), /out\.led\(3, 0\)/);
 });
 
@@ -137,4 +137,46 @@ test("modifier le programme pendant qu'il tourne : la nouvelle version prend le 
   assert.doesNotMatch(apres, /L,13,/, "l'ancienne version ne commande plus la broche 13");
   await page.click('#btnArreter');
   assert.ok(avant > 0);
+});
+
+test("anciens programmes : « au démarrage », si/sinon et répéter sont convertis", async () => {
+  const { page } = ctx;
+  await effacerEtTest(page);
+  const ancien = { type: 'ia_start', x: 10, y: 10, inputs: { DO: { block: {
+    type: 'controls_repeat_ext', inputs: { TIMES: { shadow: { type: 'math_number', fields: { NUM: 2 } } },
+      DO: { block: { type: 'controls_if', extraState: { hasElse: true }, inputs: {
+        IF0: { block: { type: 'logic_boolean', fields: { BOOL: 'TRUE' } } },
+        DO0: { block: { type: 'ard_led', fields: { PIN: '13', ETAT: '1' } } },
+        ELSE: { block: { type: 'ard_led', fields: { PIN: '13', ETAT: '0' } } } } } } } } } } };
+  await page.evaluate((a) => Blockly.serialization.workspaces.load(window.iaArduino.migrer({ blocks: { languageVersion: 0, blocks: [a] } }), window.iaArduino.ws), ancien);
+  const types = await page.evaluate(() => window.iaArduino.ws.getAllBlocks(false).map((b) => b.type));
+  for (const t of ['evt_start', 'ctrl_repeter', 'ctrl_si_sinon']) assert.ok(types.includes(t), t);
+  for (const t of ['ia_start', 'controls_repeat_ext', 'controls_if']) assert.ok(!types.includes(t), t);
+  const code = await compiler(page);
+  assert.match(code, /for \(let _i/);
+  assert.match(code, /if \(true\)/);
+  assert.match(code, /out\.led\(13, 0\)/);
+});
+
+test("les blocs dans une boucle sont peu décalés (retrait léger mais visible)", async () => {
+  const { page } = ctx;
+  await effacerEtTest(page);
+  await page.evaluate(() => window.iaArduino.insererExemple());
+  await attendre(300);
+  const d = await page.evaluate(() => {
+    const t = window.iaArduino.ws.getTopBlocks()[0];
+    const boucle = t.getNextBlock(); const si = boucle.getInputTargetBlock('DO'); const led = si.getInputTargetBlock('DO');
+    return { boucle: si.getRelativeToSurfaceXY().x - boucle.getRelativeToSurfaceXY().x, si: led.getRelativeToSurfaceXY().x - si.getRelativeToSurfaceXY().x };
+  });
+  for (const v of [d.boucle, d.si]) assert.ok(v >= 8 && v <= 24, 'retrait attendu entre 8 et 24 px : ' + v);
+});
+
+test("la catégorie « Démarrage » n'existe plus et « Événements » contient un seul bloc", async () => {
+  const { page } = ctx;
+  const cats = await page.evaluate(() => [...document.querySelectorAll('.blocklyToolboxCategory')].map((e) => e.textContent.trim()));
+  assert.deepEqual(cats, ['Événements', 'Contrôle', 'IA', 'Arduino', 'Opérateurs']);
+  await page.click('.blocklyToolboxCategory >> nth=0');
+  await attendre(500);
+  const blocs = await page.evaluate(() => window.iaArduino.ws.getFlyout().getWorkspace().getTopBlocks().map((b) => b.type));
+  assert.deepEqual(blocs, ['evt_start']);
 });

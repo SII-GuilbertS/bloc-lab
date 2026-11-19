@@ -58,27 +58,88 @@
   for (let n = 2; n <= 13; n++) BROCHES.push(['D' + n, String(n)]);
   const BROCHES_PWM = [3, 5, 6, 9, 10, 11].map((n) => ['D' + n, String(n)]);
 
+  Blockly.Blocks['evt_start'] = {
+    init: function () {
+      this.appendDummyInput().appendField('quand le programme démarre');
+      this.setNextStatement(true);
+      this.setStyle('ev_blocks');
+      this.setTooltip("Les blocs placés dessous sont exécutés une seule fois quand tu cliques sur Démarrer. Tu peux y mettre un bloc « répéter indéfiniment ».");
+    }
+  };
+  // Ancien bloc « à chaque image de la webcam » : plus proposé, mais les anciens programmes l'utilisent encore.
   Blockly.Blocks['ia_hat'] = {
     init: function () {
       this.appendDummyInput().appendField('à chaque image de la webcam');
-      this.appendStatementInput('DO').appendField('faire');
-      this.setColour(45);
+      this.appendStatementInput('DO');
+      this.setStyle('ev_blocks');
       this.setTooltip("Tout ce qui est dans ce bloc est exécuté à chaque fois que l'IA analyse une image.");
     }
   };
   Blockly.Blocks['ia_start'] = {
     init: function () {
       this.appendDummyInput().appendField('au démarrage');
-      this.appendStatementInput('DO').appendField('faire');
-      this.setColour(45);
+      this.appendStatementInput('DO');
+      this.setStyle('ev_blocks');
       this.setTooltip("Ce qui est dans ce bloc est exécuté une seule fois quand tu cliques sur Démarrer. Tu peux y mettre un bloc « répéter pour toujours ».");
+    }
+  };
+  /* Blocs de contrôle à nous : l'étiquette est toujours AVANT le trou (jamais dans le bras du « C »),
+     ce qui garde le retrait des blocs intérieurs petit. */
+  Blockly.Blocks['ctrl_si'] = {
+    init: function () {
+      this.appendValueInput('COND').setCheck('Boolean').appendField('si');
+      this.appendDummyInput().appendField('alors');
+      this.setInputsInline(true);
+      this.appendStatementInput('DO');
+      this.setPreviousStatement(true);
+      this.setNextStatement(true);
+      this.setStyle('ct_blocks');
+      this.setTooltip('Exécute les blocs à l\'intérieur seulement si la condition est vraie.');
+    }
+  };
+  Blockly.Blocks['ctrl_si_sinon'] = {
+    init: function () {
+      this.appendValueInput('COND').setCheck('Boolean').appendField('si');
+      this.appendDummyInput().appendField('alors');
+      this.setInputsInline(true);
+      this.appendStatementInput('DO');
+      this.appendDummyInput('SINON').appendField('sinon');
+      this.appendStatementInput('ELSE');
+      this.setPreviousStatement(true);
+      this.setNextStatement(true);
+      this.setStyle('ct_blocks');
+      this.setTooltip('Si la condition est vraie, exécute les premiers blocs ; sinon, exécute les blocs de « sinon ».');
+    }
+  };
+  Blockly.Blocks['ctrl_repeter'] = {
+    init: function () {
+      this.appendValueInput('TIMES').setCheck('Number').appendField('répéter');
+      this.appendDummyInput().appendField('fois');
+      this.setInputsInline(true);
+      this.appendStatementInput('DO');
+      this.setPreviousStatement(true);
+      this.setNextStatement(true);
+      this.setStyle('ct_blocks');
+      this.setTooltip('Répète les blocs à l\'intérieur le nombre de fois indiqué.');
+    }
+  };
+  Blockly.Blocks['ctrl_tant_que'] = {
+    init: function () {
+      this.appendValueInput('COND').setCheck('Boolean').appendField('répéter tant que');
+      this.setInputsInline(true);
+      this.appendStatementInput('DO');
+      this.setPreviousStatement(true);
+      this.setNextStatement(true);
+      this.setStyle('ct_blocks');
+      this.setTooltip('Répète les blocs à l\'intérieur tant que la condition est vraie.');
     }
   };
   Blockly.Blocks['ia_forever'] = {
     init: function () {
-      this.appendStatementInput('DO').appendField('répéter pour toujours');
+      this.appendDummyInput().appendField('répéter indéfiniment');
+      this.appendStatementInput('DO');
       this.setPreviousStatement(true);
-      this.setColour(120);
+      this.setStyle('ct_blocks');
       this.setTooltip("Répète les blocs à l'intérieur sans jamais s'arrêter (jusqu'à ce que tu cliques sur Arrêter).");
     }
   };
@@ -89,7 +150,7 @@
       this.setInputsInline(true);
       this.setPreviousStatement(true);
       this.setNextStatement(true);
-      this.setColour(120);
+      this.setStyle('ct_blocks');
       this.setTooltip('Fait une pause avant de passer au bloc suivant.');
     }
   };
@@ -102,7 +163,7 @@
         .appendField(new Blockly.FieldNumber(80, 1, 100, 1), 'SEUIL')
         .appendField('%');
       this.setOutput(true, 'Boolean');
-      this.setColour(260);
+      this.setStyle('ia_blocks');
       this.setTooltip("Vrai si la confiance de l'IA pour cette classe dépasse le seuil.");
     }
   };
@@ -113,7 +174,7 @@
         .appendField(new Blockly.FieldDropdown(optionsClasses), 'CLASSE')
         .appendField('(en %)');
       this.setOutput(true, 'Number');
-      this.setColour(260);
+      this.setStyle('ia_blocks');
       this.setTooltip("Nombre entre 0 et 100 : la confiance de l'IA pour cette classe.");
     }
   };
@@ -121,20 +182,21 @@
     init: function () {
       this.appendDummyInput().appendField('classe la plus probable');
       this.setOutput(true, 'String');
-      this.setColour(260);
+      this.setStyle('ia_blocks');
       this.setTooltip("Le nom de la classe que l'IA juge la plus probable.");
     }
   };
   Blockly.Blocks['ard_led'] = {
     init: function () {
       this.appendDummyInput()
-        .appendField('écrire')
-        .appendField(new Blockly.FieldDropdown([['état haut (1)', '1'], ['état bas (0)', '0']]), 'ETAT')
-        .appendField('sur')
-        .appendField(new Blockly.FieldDropdown(BROCHES), 'PIN');
+        .appendField('mettre la broche')
+        .appendField(new Blockly.FieldDropdown(BROCHES), 'PIN')
+        .appendField('à')
+        .appendField(new Blockly.FieldDropdown([['haut', '1'], ['bas', '0']]), 'ETAT');
+      this.setInputsInline(true);
       this.setPreviousStatement(true);
       this.setNextStatement(true);
-      this.setColour(160);
+      this.setStyle('ar_blocks');
       this.setTooltip("Met la broche à l'état haut (1 = 5 V, LED allumée) ou à l'état bas (0 = 0 V, LED éteinte).");
     }
   };
@@ -144,7 +206,7 @@
         .appendField("lire l'état de la broche")
         .appendField(new Blockly.FieldDropdown(BROCHES), 'PIN');
       this.setOutput(true, null);
-      this.setColour(160);
+      this.setStyle('ar_blocks');
       this.setTooltip("Lit la broche : 1 si elle est à l'état haut (5 V), 0 si elle est à l'état bas (0 V). Utile pour un bouton ou un capteur.");
     }
   };
@@ -158,7 +220,7 @@
       this.setInputsInline(true);
       this.setPreviousStatement(true);
       this.setNextStatement(true);
-      this.setColour(160);
+      this.setStyle('ar_blocks');
       this.setTooltip("Place le servomoteur à l'angle voulu (de 0 à 180 degrés).");
     }
   };
@@ -172,7 +234,7 @@
       this.setInputsInline(true);
       this.setPreviousStatement(true);
       this.setNextStatement(true);
-      this.setColour(160);
+      this.setStyle('ar_blocks');
       this.setTooltip("Règle une luminosité ou une vitesse de moteur : 0 = arrêt, 255 = maximum. Broches PWM : 3, 5, 6, 9, 10, 11.");
     }
   };
@@ -181,15 +243,28 @@
       this.appendValueInput('TEXT').appendField('écrire dans le journal');
       this.setPreviousStatement(true);
       this.setNextStatement(true);
-      this.setColour(160);
+      this.setStyle('ar_blocks');
       this.setTooltip('Affiche un message dans le journal, utile pour comprendre ce que fait le programme.');
     }
   };
 
   /* ---------- Blocs : génération du code ---------- */
   G.INFINITE_LOOP_TRAP = 'await out.tick();\n';
+  G.forBlock['evt_start'] = function () { return ''; };
   G.forBlock['ia_hat'] = function () { return ''; };
   G.forBlock['ia_start'] = function () { return ''; };
+  G.forBlock['ctrl_si'] = function (b, g) {
+    return 'if (' + (g.valueToCode(b, 'COND', O.NONE) || 'false') + ') {\n' + g.statementToCode(b, 'DO') + '}\n';
+  };
+  G.forBlock['ctrl_si_sinon'] = function (b, g) {
+    return 'if (' + (g.valueToCode(b, 'COND', O.NONE) || 'false') + ') {\n' + g.statementToCode(b, 'DO') + '} else {\n' + g.statementToCode(b, 'ELSE') + '}\n';
+  };
+  G.forBlock['ctrl_repeter'] = function (b, g) {
+    return 'for (let _i = 0, _n = Number(' + (g.valueToCode(b, 'TIMES', O.NONE) || '0') + ') || 0; _i < _n; _i++) {\n' + g.addLoopTrap(g.statementToCode(b, 'DO'), b) + '}\n';
+  };
+  G.forBlock['ctrl_tant_que'] = function (b, g) {
+    return 'while (' + (g.valueToCode(b, 'COND', O.NONE) || 'false') + ') {\n' + g.addLoopTrap(g.statementToCode(b, 'DO'), b) + '}\n';
+  };
   G.forBlock['ia_forever'] = function (b, g) {
     return 'while (true) {\n' + g.addLoopTrap(g.statementToCode(b, 'DO'), b) + '}\n';
   };
@@ -224,35 +299,60 @@
   const boite = {
     kind: 'categoryToolbox',
     contents: [
-      { kind: 'category', name: 'Démarrage', colour: '45', contents: [{ kind: 'block', type: 'ia_start' }, { kind: 'block', type: 'ia_hat' }] },
-      { kind: 'category', name: 'Boucles', colour: '120', contents: [
+      { kind: 'category', name: 'Événements', colour: '#F5B800', contents: [{ kind: 'block', type: 'evt_start' }] },
+      { kind: 'category', name: 'Contrôle', colour: '#F28C28', contents: [
         { kind: 'block', type: 'ia_forever' },
-        { kind: 'block', type: 'controls_repeat_ext', inputs: { TIMES: nombreAvecDefaut('math_number', 10) } },
-        { kind: 'block', type: 'controls_whileUntil' },
+        { kind: 'block', type: 'ctrl_repeter', inputs: { TIMES: nombreAvecDefaut('math_number', 10) } },
+        { kind: 'block', type: 'ctrl_tant_que' },
         { kind: 'block', type: 'controls_flow_statements' },
-        { kind: 'block', type: 'ia_wait', inputs: { SEC: nombreAvecDefaut('math_number', 1) } }] },
-      { kind: 'category', name: 'IA', colour: '260', contents: [
+        { kind: 'block', type: 'ia_wait', inputs: { SEC: nombreAvecDefaut('math_number', 1) } },
+        { kind: 'block', type: 'ctrl_si' },
+        { kind: 'block', type: 'ctrl_si_sinon' }] },
+      { kind: 'category', name: 'IA', colour: '#8F5BD0', contents: [
         { kind: 'block', type: 'ia_reconnait' }, { kind: 'block', type: 'ia_confiance' }, { kind: 'block', type: 'ia_top' }] },
-      { kind: 'category', name: 'Arduino', colour: '160', contents: [
+      { kind: 'category', name: 'Arduino', colour: '#1FA3C4', contents: [
         { kind: 'block', type: 'ard_led' },
         { kind: 'block', type: 'ard_lire' },
         { kind: 'block', type: 'ard_servo', inputs: { ANGLE: nombreAvecDefaut('math_number', 90) } },
         { kind: 'block', type: 'ard_pwm', inputs: { VAL: nombreAvecDefaut('math_number', 128) } },
         { kind: 'block', type: 'ia_journal', inputs: { TEXT: { shadow: { type: 'text', fields: { TEXT: 'bonjour' } } } } }] },
-      { kind: 'category', name: 'Logique', colour: '210', contents: [
-        { kind: 'block', type: 'controls_if' },
-        { kind: 'block', type: 'controls_if', extraState: { hasElse: true } },
+      { kind: 'category', name: 'Opérateurs', colour: '#52B84F', contents: [
         { kind: 'block', type: 'logic_compare' }, { kind: 'block', type: 'logic_operation' },
-        { kind: 'block', type: 'logic_negate' }, { kind: 'block', type: 'logic_boolean' }] },
-      { kind: 'category', name: 'Maths', colour: '230', contents: [
-        { kind: 'block', type: 'math_number' }, { kind: 'block', type: 'math_arithmetic' }] },
-      { kind: 'category', name: 'Texte', colour: '160', contents: [{ kind: 'block', type: 'text' }] }
+        { kind: 'block', type: 'logic_negate' }, { kind: 'block', type: 'logic_boolean' },
+        { kind: 'block', type: 'math_number' }, { kind: 'block', type: 'math_arithmetic' },
+        { kind: 'block', type: 'text' }] }
     ]
   };
 
+  /* ---------- Apparence « mBlock » : couleurs vives, retrait réduit des boucles ---------- */
+  const COULEURS = {
+    ev_blocks: ['#F5B800', '#C99700'], ct_blocks: ['#F28C28', '#C4701B'], ia_blocks: ['#8F5BD0', '#7140AE'],
+    ar_blocks: ['#1FA3C4', '#14809B'], op_blocks: ['#52B84F', '#3E943C']
+  };
+  const stylesBlocs = {};
+  Object.keys(COULEURS).forEach((k) => { stylesBlocs[k] = { colourPrimary: COULEURS[k][0], colourSecondary: COULEURS[k][0], colourTertiary: COULEURS[k][1] }; });
+  stylesBlocs.ev_blocks.hat = 'cap';
+  function recolorer(type, style) {
+    const def = Blockly.Blocks[type]; const init = def.init;
+    def.init = function () { init.call(this); this.setStyle(style); };
+  }
+  // Blocs de Blockly rangés dans nos catégories.
+  ['controls_flow_statements'].forEach((t) => recolorer(t, 'ct_blocks'));
+  ['logic_compare', 'logic_operation', 'logic_negate', 'logic_boolean', 'math_number', 'math_arithmetic', 'text'].forEach((t) => recolorer(t, 'op_blocks'));
+  const THEME = Blockly.Theme.defineTheme('mblock', { name: 'mblock', base: Blockly.Themes.Zelos, blockStyles: stylesBlocs });
+  const RETRAIT = 14;   // retrait des blocs dans une boucle (px) ; 32 par défaut
+  class ConstantesMblock extends Blockly.zelos.ConstantProvider {
+    constructor() { super(); this.STATEMENT_INPUT_PADDING_LEFT = RETRAIT; }
+  }
+  class RenduMblock extends Blockly.zelos.Renderer {
+    makeConstants_() { return new ConstantesMblock(); }
+  }
+  Blockly.blockRendering.register('mblock', RenduMblock);
+
   const ws = Blockly.inject('blocklyDiv', {
     toolbox: boite,
-    renderer: 'zelos',
+    renderer: 'mblock',
+    theme: THEME,
     media: 'media/',
     trashcan: false,
     zoom: { controls: false, wheel: true, startScale: 0.95, maxScale: 1.8, minScale: 0.5, scaleSpeed: 1.1 },
@@ -788,6 +888,7 @@
     ws.getTopBlocks(true).forEach((b) => {
       const actif = b.isEnabled ? b.isEnabled() : !b.disabled;
       if (!actif) return;
+      if (b.type === 'evt_start') starts.push(G.blockToCode(b));
       if (b.type === 'ia_start') starts.push(G.statementToCode(b, 'DO'));
       if (b.type === 'ia_hat') frame += G.statementToCode(b, 'DO');
     });
@@ -795,9 +896,9 @@
   }
   function texteCode(c) {
     let s = '';
-    c.starts.forEach((x) => { s += '// au démarrage\n' + x + '\n'; });
+    c.starts.forEach((x) => { s += '// quand le programme démarre\n' + x + '\n'; });
     if (c.frame.trim()) s += '// à chaque image de la webcam\n' + c.frame;
-    return s.trim() ? s : "(aucun bloc « au démarrage » ni « à chaque image de la webcam » n'est utilisé)";
+    return s.trim() ? s : "(place un bloc « quand le programme démarre » pour commencer)";
   }
   function recompiler() {
     const c = compiler();
@@ -825,7 +926,7 @@
   function demarrer() {
     const c = recompiler();
     if (!c.starts.some((x) => x.trim()) && !c.frame.trim()) {
-      journal("Rien à exécuter : place des blocs dans « au démarrage » ou « à chaque image de la webcam ».", 'err');
+      journal("Rien à exécuter : place des blocs sous « quand le programme démarre ».", 'err');
       return;
     }
     let fonctions;
@@ -903,15 +1004,15 @@
     ajouterConnues([c0]);
     const etat = {
       blocks: { languageVersion: 0, blocks: [{
-        type: 'ia_hat', x: 40, y: 30,
-        inputs: { DO: { block: {
-          type: 'controls_if', extraState: { hasElse: true },
+        type: 'evt_start', x: 40, y: 30,
+        next: { block: { type: 'ia_forever', inputs: { DO: { block: {
+          type: 'ctrl_si_sinon',
           inputs: {
-            IF0: { block: { type: 'ia_reconnait', fields: { CLASSE: c0, SEUIL: 80 } } },
-            DO0: { block: { type: 'ard_led', fields: { PIN: '13', ETAT: '1' } } },
+            COND: { block: { type: 'ia_reconnait', fields: { CLASSE: c0, SEUIL: 80 } } },
+            DO: { block: { type: 'ard_led', fields: { PIN: '13', ETAT: '1' } } },
             ELSE: { block: { type: 'ard_led', fields: { PIN: '13', ETAT: '0' } } }
           }
-        } } }
+        } } } } }
       }] }
     };
     Blockly.serialization.workspaces.load(etat, ws);
@@ -919,13 +1020,13 @@
   }
   function insererExemple2() {
     Blockly.serialization.workspaces.load({ blocks: { languageVersion: 0, blocks: [{
-      type: 'ia_start', x: 40, y: 30,
-      inputs: { DO: { block: { type: 'ia_forever', inputs: { DO: { block: {
+      type: 'evt_start', x: 40, y: 30,
+      next: { block: { type: 'ia_forever', inputs: { DO: { block: {
         type: 'ard_led', fields: { PIN: '13', ETAT: '1' },
         next: { block: { type: 'ia_wait', inputs: { SEC: { shadow: { type: 'math_number', fields: { NUM: 0.5 } } } },
           next: { block: { type: 'ard_led', fields: { PIN: '13', ETAT: '0' },
             next: { block: { type: 'ia_wait', inputs: { SEC: { shadow: { type: 'math_number', fields: { NUM: 0.5 } } } } } } } } } }
-      } } } } } }
+      } } } } }
     }] } }, ws);
     journal('Exemple inséré : la LED de la broche 13 clignote pour toujours.', 'info');
   }
@@ -937,10 +1038,42 @@
     document.body.appendChild(lien); lien.click(); lien.remove();
     setTimeout(() => URL.revokeObjectURL(lien.href), 2000);
   }
+  // Anciens programmes : « au démarrage » (avec un trou) devient « quand le programme démarre » (blocs dessous).
+  function migrer(v) {
+    if (Array.isArray(v)) return v.map(migrer);
+    if (v && typeof v === 'object') {
+      if (v.type === 'ia_start') {
+        const fait = v.inputs && v.inputs.DO && v.inputs.DO.block;
+        const n = { type: 'evt_start', x: v.x, y: v.y };
+        if (fait) n.next = { block: migrer(fait) };
+        return n;
+      }
+      const r = {}; Object.keys(v).forEach((k) => { r[k] = migrer(v[k]); });
+      const ent = r.inputs || {};
+      if (v.type === 'controls_if') {
+        const n = { type: (ent.ELSE ? 'ctrl_si_sinon' : 'ctrl_si'), inputs: {} };
+        if (ent.IF0) n.inputs.COND = ent.IF0;
+        if (ent.DO0) n.inputs.DO = ent.DO0;
+        if (ent.ELSE) n.inputs.ELSE = ent.ELSE;
+        ['next', 'x', 'y'].forEach((k) => { if (r[k] !== undefined) n[k] = r[k]; });
+        return n;
+      }
+      if (v.type === 'controls_repeat_ext') return Object.assign(r, { type: 'ctrl_repeter' });
+      if (v.type === 'controls_whileUntil') {
+        const n = { type: 'ctrl_tant_que', inputs: {} };
+        if (ent.BOOL) n.inputs.COND = (r.fields && r.fields.MODE === 'UNTIL') ? { block: { type: 'logic_negate', inputs: { BOOL: ent.BOOL } } } : ent.BOOL;
+        if (ent.DO) n.inputs.DO = ent.DO;
+        ['next', 'x', 'y'].forEach((k) => { if (r[k] !== undefined) n[k] = r[k]; });
+        return n;
+      }
+      return r;
+    }
+    return v;
+  }
   function chargerDonnees(donnees) {
     ajouterConnues(donnees.classes || []);
     ajouterConnues(classesDansJson(donnees.blocs, []));
-    Blockly.serialization.workspaces.load(donnees.blocs, ws);
+    Blockly.serialization.workspaces.load(migrer(donnees.blocs), ws);
   }
   function sauvegardeAuto() {
     try { localStorage.setItem('ia-arduino-programme', JSON.stringify({ version: 1, classes: state.connues, blocs: Blockly.serialization.workspaces.save(ws) })); }
@@ -1005,5 +1138,5 @@
 
   // Accès pour les tests automatiques
   window.iaArduino = {
-    conseilIframe, dansIframe, state, ws, compiler, texteCode, ai, out, demarrer, arreter, simuler, activerTest, insererExemple, insererExemple2 };
+    conseilIframe, dansIframe, migrer, state, ws, compiler, texteCode, ai, out, demarrer, arreter, simuler, activerTest, insererExemple, insererExemple2 };
 })();
