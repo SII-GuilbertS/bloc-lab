@@ -386,6 +386,12 @@
       try { await state.writer.write(encodeur.encode('?\n')); } catch (e) { /* ignoré */ }
     }
   }
+  /* Page intégrée dans un autre site (iframe) : le site doit autoriser la carte et la caméra. */
+  const dansIframe = () => { try { return window.self !== window.top; } catch (e) { return true; } };
+  const CONSEIL_IFRAME = " Cette page est intégrée dans un autre site qui ne l'autorise pas : le professeur doit ajouter allow=\"serial; camera\" à l'iframe (et utiliser une adresse https).";
+  function conseilIframe(e) {
+    return (dansIframe() && e && (e.name === 'SecurityError' || e.name === 'NotAllowedError')) ? CONSEIL_IFRAME : '';
+  }
   async function connecter() {
     if (!('serial' in navigator)) {
       alerte("Le port série n'est pas disponible dans ce navigateur : utilise Chrome ou Edge sur ordinateur. Le programme reste utilisable en simulation.");
@@ -397,7 +403,7 @@
       journal('Port ouvert. La carte redémarre, patiente 2 secondes…', 'info');
       await attacherPort(port);
     } catch (e) {
-      journal('Connexion impossible : ' + e.message, 'err');
+      journal('Connexion impossible : ' + e.message + conseilIframe(e), 'err');
       state.port = null; state.writer = null; state.reader = null;
       majPuceCarte();
     }
@@ -538,7 +544,7 @@
       await attacherPort(p);
     } catch (e) {
       majProgression(0, 'Échec : ' + e.message);
-      journal('Échec du téléversement : ' + e.message, 'err');
+      journal('Échec du téléversement : ' + e.message + conseilIframe(e), 'err');
       try { if (L) await L.fermer(); } catch (x) { /* ignoré */ }
       try { if (port) await port.close(); } catch (x) { /* ignoré */ }
     }
@@ -702,7 +708,7 @@
       state.analyse = true;
       boucleAnalyse();
     } catch (e) {
-      journal("Webcam inaccessible : " + e.message + ". Autorise la caméra dans le navigateur.", 'err');
+      journal("Webcam inaccessible : " + e.message + ". Autorise la caméra dans le navigateur." + conseilIframe(e), 'err');
       alerte("La webcam n'a pas pu être activée. Autorise l'accès à la caméra, puis recharge le modèle.");
     }
     majBoutons();
@@ -966,5 +972,6 @@
   journal('Bienvenue ! Étape 1 : connecte la carte. Étape 2 : charge le modèle. Étape 3 : assemble les blocs, puis clique sur Démarrer.', 'info');
 
   // Accès pour les tests automatiques
-  window.iaArduino = { state, ws, compiler, texteCode, ai, out, demarrer, arreter, simuler, activerTest, insererExemple };
+  window.iaArduino = {
+    conseilIframe, dansIframe, state, ws, compiler, texteCode, ai, out, demarrer, arreter, simuler, activerTest, insererExemple };
 })();
