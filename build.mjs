@@ -35,3 +35,8 @@ page = remplacer(page, '/*__APP__*/', echapperScript(remplacer(lire('./src/app.j
 mkdirSync(new URL('./dist/', import.meta.url), { recursive: true });
 writeFileSync(new URL('./dist/ia-arduino.html', import.meta.url), page);
 console.log('dist/ia-arduino.html écrit (' + Math.round(page.length / 1024) + ' Ko)');
+
+// Dossier « site » : copie prête à déposer sur l'hébergement (OVH…), nommée index.html.
+mkdirSync(new URL('./site/', import.meta.url), { recursive: true });
+writeFileSync(new URL('./site/index.html', import.meta.url), page);
+console.log('site/index.html écrit (copie à envoyer sur l\'hébergement)');

@@ -27,11 +27,11 @@ Les broches D0 et D1 sont volontairement absentes : elles servent à la liaison 
 
 ## Intégrer l'atelier dans un site (iframe)
 
-1. Mettre en ligne le fichier `dist/ia-arduino.html` sur une adresse **https** (hébergement du collège, GitHub Pages, serveur ÉLÉA…). Le fichier est autonome : une seule page, rien d'autre à héberger.
+1. Lancer `npm run build`, puis mettre en ligne le **contenu du dossier `site/`** (un seul fichier, `index.html`, copie de `dist/ia-arduino.html`) dans un sous-dossier de l'hébergement (OVH : `www/atelier-blocs/`), sur une adresse **https** (hébergement du collège, GitHub Pages, serveur ÉLÉA…). Le fichier est autonome : une seule page, rien d'autre à héberger.
 2. Dans la page du site, ajouter la balise suivante (exemple complet : `exemples/integration-iframe.html`) :
 
 ```html
-<iframe src="https://mon-site.fr/ia-arduino.html" title="Atelier de blocs Arduino"
+<iframe src="https://mon-site.fr/atelier-blocs/" title="Atelier de blocs Arduino"
         allow="serial; camera" style="width:100%; height:90vh; border:0"></iframe>
 ```
 

@@ -5,6 +5,7 @@ Page web unique **en français** pour programmer une Arduino par blocs (Blockly)
 
 ## Commandes
 - `npm run build` : produit `dist/ia-arduino.html` (page unique, bibliothèques incluses : pas de CDN, le collège peut être hors ligne).
+- `site/index.html` : copie de la page écrite par `npm run build` (dossier ignoré par git), à déposer tel quel sur l'hébergement.
 - `npm test` : build + tests Playwright (`CHROME_PATH` et `NO_SANDBOX=1` si besoin).
 - `npm run firmware` : recompile le `.hex` (arduino-cli). Toujours recompiler après avoir modifié le `.ino`, puis `npm run build`.
 
