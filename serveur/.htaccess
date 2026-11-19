@@ -1,0 +1,7 @@
+# bloc-lab : protections du dossier de l'outil (Apache, hébergement OVH)
+Options -Indexes
+
+# Le fichier de réglages (mot de passe haché) ne doit jamais être lisible depuis internet.
+<FilesMatch "^config\.php$">
+  Require all denied
+</FilesMatch>

@@ -4,3 +4,5 @@ dist/
 *.eep
 .DS_Store
 site/
+outils/
+config.php

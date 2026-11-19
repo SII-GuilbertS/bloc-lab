@@ -19,7 +19,7 @@
     derniere: 0,
     stream: null,
     port: null, writer: null, reader: null, lecture: null, deconnexionVoulue: false,
-    lectures: {}, alerteLecture: false, running: false, frameFn: null, execution: 0, codeCourant: { starts: [], frame: '' }, idBoucle: 0, cleSauvegarde: 'ia-arduino-programme', exercice: null, exerciceEnEdition: null, modeleUrl: '', cameraPerdue: false, enRelance: false, derniereCamera: null, minuterieCamera: null, codeDemarrage: '', codeImage: '',
+    lectures: {}, alerteLecture: false, running: false, frameFn: null, execution: 0, codeCourant: { starts: [], frame: '' }, idBoucle: 0, cleSauvegarde: 'ia-arduino-programme', exercice: null, exerciceEnEdition: null, api: { disponible: false, connecte: false }, modeleUrl: '', cameraPerdue: false, enRelance: false, derniereCamera: null, minuterieCamera: null, codeDemarrage: '', codeImage: '',
     cache: {}
   };
 
@@ -1169,6 +1169,17 @@
   $('btnArreter').addEventListener('click', arreter);
   $('btnEnregistrer').addEventListener('click', enregistrer);
   $('btnExporterExercice').addEventListener('click', ouvrirDialogueExercice);
+  $('btnMesExercices').addEventListener('click', ouvrirMesExercices);
+  $('mxFermer').addEventListener('click', () => $('dlgMesExercices').close());
+  $('mxConnexion').addEventListener('submit', (e) => { e.preventDefault(); connexionSite(); });
+  $('mxNouveau').addEventListener('click', () => { $('dlgMesExercices').close(); ouvrirDialogueExercice(); });
+  $('mxDeconnexion').addEventListener('click', async () => {
+    try { await appelApi('deconnexion', {}); } catch (e) { /* sans importance */ }
+    state.api.connecte = false; majBoutonsApi();
+    $('mxContenu').style.display = 'none'; $('mxConnexion').style.display = 'block';
+    $('mxMessage').textContent = 'Tu es déconnecté.';
+  });
+  $('btnEnregistrerSite').addEventListener('click', () => enregistrerSurSite(false));
   $('btnFermerExercice').addEventListener('click', () => $('dlgExercice').close());
   $('exTitre').addEventListener('input', () => { if (!$('exId').dataset.modifie) $('exId').value = fabriquerId($('exTitre').value); });
   $('exId').addEventListener('input', () => { $('exId').dataset.modifie = '1'; });
@@ -1210,37 +1221,197 @@
     $('exConsigne').value = e.consigne || '';
     $('exModele').value = e.modeleUrl || state.modeleUrl || '';
     $('exResultat').style.display = 'none';
+    $('exResultatSite').style.display = 'none';
+    $('exMessageSite').textContent = '';
+    majBoutonsApi();
     $('dlgExercice').showModal();
   }
-  function creerFichierExercice() {
+  // Lit le formulaire et fabrique l'exercice (ou null si un champ est invalide).
+  function lireFormulaireExercice() {
     const id = $('exId').value.trim();
-    if (!ID_EXERCICE.test(id)) { $('exId').setCustomValidity('Lettres minuscules, chiffres et tirets seulement.'); $('exId').reportValidity(); return; }
+    if (!ID_EXERCICE.test(id)) { $('exId').setCustomValidity('Lettres minuscules, chiffres et tirets seulement.'); $('exId').reportValidity(); return null; }
     $('exId').setCustomValidity('');
     let url = $('exModele').value.trim();
-    if (url && !/^https?:\/\//.test(url)) { journal('Le lien du modèle doit commencer par https://', 'err'); $('exModele').focus(); return; }
+    if (url && !/^https?:\/\//.test(url)) { journal('Le lien du modèle doit commencer par https://', 'err'); $('exModele').focus(); return null; }
     if (url && !url.endsWith('/')) url += '/';
-    const ex = {
+    return {
       format: EXERCICE_FORMAT, version: 1, id: id, titre: $('exTitre').value.trim(), consigne: $('exConsigne').value.trim(),
       modele: url ? { url: url } : null, classes: state.connues.slice(),
       blocs: Blockly.serialization.workspaces.save(ws), modifie: new Date().toISOString()
     };
+  }
+  function baliseIframe(id, titre, base) {
+    const titreHtml = String(titre).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+    return '<iframe src="' + base + '?exercice=' + id + '" title="' + titreHtml + '" allow="serial; camera" style="width:100%; height:90vh; border:0"></iframe>';
+  }
+  // Adresse de l'outil sans ce qui suit le « ? » ni « index.html ».
+  const adresseOutil = () => location.href.split(/[?#]/)[0].replace(/index\.html$/, '');
+  function creerFichierExercice() {
+    const ex = lireFormulaireExercice();
+    if (!ex) return;
     const lien = document.createElement('a');
     lien.href = URL.createObjectURL(new Blob([JSON.stringify(ex, null, 1)], { type: 'application/json' }));
-    lien.download = id + '.json';
+    lien.download = ex.id + '.json';
     document.body.appendChild(lien); lien.click(); lien.remove();
     setTimeout(() => URL.revokeObjectURL(lien.href), 2000);
-    state.exerciceEnEdition = { id: id, titre: ex.titre, consigne: ex.consigne, modeleUrl: url };
-    const titreHtml = ex.titre.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
-    $('exBalise').value = '<iframe src="https://VOTRE-SITE/atelier-blocs/?exercice=' + id + '" title="' + titreHtml + '" allow="serial; camera" style="width:100%; height:90vh; border:0"></iframe>';
-    $('exFichier').textContent = 'exercices/' + id + '.json';
+    state.exerciceEnEdition = { id: ex.id, titre: ex.titre, consigne: ex.consigne, modeleUrl: ex.modele ? ex.modele.url : '' };
+    $('exBalise').value = baliseIframe(ex.id, ex.titre, 'https://VOTRE-SITE/atelier-blocs/');
+    $('exFichier').textContent = 'exercices/' + ex.id + '.json';
+    $('exResultatSite').style.display = 'none';
     $('exResultat').style.display = 'block';
-    journal('Exercice exporté : ' + id + '.json', 'info');
+    journal('Exercice exporté : ' + ex.id + '.json', 'info');
+  }
+
+  /* ---------- Enregistrement sur le site (api.php) ---------- */
+  async function appelApi(action, corps) {
+    if (location.protocol === 'file:') throw new Error('hors site');
+    const opt = { credentials: 'same-origin', cache: 'no-store', headers: { 'X-Requested-With': 'bloc-lab' } };
+    if (corps !== undefined) { opt.method = 'POST'; opt.headers['Content-Type'] = 'application/json'; opt.body = JSON.stringify(corps); }
+    const r = await fetch(new URL('api.php?action=' + action, location.href), opt);
+    let d = null;
+    try { d = await r.json(); } catch (e) { /* pas de réponse JSON */ }
+    if (!d || typeof d.ok !== 'boolean') throw new Error('api indisponible');
+    return Object.assign({ statut: r.status }, d);
+  }
+  function majBoutonsApi() {
+    $('btnEnregistrerSite').style.display = state.api.connecte ? '' : 'none';
+  }
+  async function verifierApi() {
+    try {
+      const d = await appelApi('etat');
+      state.api.disponible = !!d.configure;
+      state.api.connecte = !!d.connecte;
+    } catch (e) { state.api.disponible = false; state.api.connecte = false; }
+    majBoutonsApi();
+    return state.api;
+  }
+  async function ouvrirMesExercices() {
+    $('mxMessage').textContent = '';
+    $('mxConnexion').style.display = 'none';
+    $('mxContenu').style.display = 'none';
+    $('dlgMesExercices').showModal();
+    await verifierApi();
+    let etat = null;
+    try { etat = await appelApi('etat'); } catch (e) { /* api absente */ }
+    if (!etat) {
+      $('mxMessage').textContent = "Cette fonction marche seulement sur ton site, avec le fichier api.php à côté de index.html (voir le README). Tu peux toujours utiliser « Exporter comme exercice » pour télécharger un fichier.";
+    } else if (!etat.configure) {
+      $('mxMessage').textContent = "api.php est bien là, mais il manque le fichier config.php (ton mot de passe). Lance « npm run mot-de-passe » sur ton PC, puis envoie site/config.php à côté de index.html.";
+    } else if (!etat.connecte) {
+      $('mxMessage').textContent = 'Entre ton mot de passe enseignant.';
+      $('mxConnexion').style.display = 'block';
+      $('mxMdp').focus();
+    } else {
+      await afficherListeExercices();
+    }
+  }
+  async function connexionSite() {
+    $('mxMessage').textContent = 'Connexion…';
+    try {
+      const d = await appelApi('connexion', { motdepasse: $('mxMdp').value });
+      $('mxMdp').value = '';
+      if (!d.ok) { $('mxMessage').textContent = d.erreur || 'Connexion impossible.'; return; }
+      state.api.connecte = true; majBoutonsApi();
+      $('mxConnexion').style.display = 'none';
+      await afficherListeExercices();
+    } catch (e) { $('mxMessage').textContent = "Impossible de joindre api.php : " + e.message; }
+  }
+  async function afficherListeExercices() {
+    $('mxContenu').style.display = 'block';
+    $('mxMessage').textContent = '';
+    const ul = $('mxListe');
+    ul.textContent = '';
+    let d;
+    try { d = await appelApi('liste'); } catch (e) { $('mxMessage').textContent = 'Liste impossible : ' + e.message; return; }
+    if (!d.ok) {
+      if (d.statut === 401) { state.api.connecte = false; majBoutonsApi(); $('mxContenu').style.display = 'none'; $('mxConnexion').style.display = 'block'; }
+      $('mxMessage').textContent = d.erreur || 'Liste impossible.'; return;
+    }
+    if (!d.exercices.length) { $('mxMessage').textContent = "Aucun exercice enregistré pour l'instant."; return; }
+    d.exercices.forEach((e) => {
+      const li = document.createElement('li');
+      const nom = document.createElement('span');
+      const t = document.createElement('b'); t.textContent = e.titre;
+      const i = document.createElement('small'); i.textContent = ' ' + e.id + (e.modifie ? ' — ' + e.modifie.slice(0, 10) : '');
+      nom.append(t, i);
+      li.appendChild(nom);
+      const actions = document.createElement('span');
+      [['Ouvrir', () => ouvrirDepuisSite(e.id)], ['Dupliquer', () => dupliquerSurSite(e.id)], ['Balise iframe', () => copierBalise(e)], ['Supprimer', () => supprimerSurSite(e)]].forEach(([texte, f]) => {
+        const b = document.createElement('button'); b.type = 'button'; b.className = 'mini'; b.textContent = texte;
+        b.addEventListener('click', f); actions.appendChild(b);
+      });
+      li.appendChild(actions);
+      ul.appendChild(li);
+    });
+  }
+  async function lireExerciceSite(id) {
+    const r = await fetch(new URL('exercices/' + id + '.json', location.href), { cache: 'no-store' });
+    if (!r.ok) throw new Error('erreur ' + r.status);
+    const ex = await r.json();
+    if (!exerciceValide(ex)) throw new Error('fichier invalide');
+    return ex;
+  }
+  async function ouvrirDepuisSite(id) {
+    try {
+      const ex = await lireExerciceSite(id);
+      ouvrirExerciceFichier(ex);
+      $('dlgMesExercices').close();
+    } catch (e) { $('mxMessage').textContent = "Impossible d'ouvrir l'exercice : " + e.message; }
+  }
+  async function dupliquerSurSite(id) {
+    try {
+      const ex = await lireExerciceSite(id);
+      const existants = (await appelApi('liste')).exercices.map((x) => x.id);
+      let nouveau = (id + '-copie').slice(0, 60), n = 2;
+      while (existants.includes(nouveau)) nouveau = (id.slice(0, 54) + '-copie-' + n++);
+      ex.id = nouveau; ex.titre = ('Copie de ' + ex.titre).slice(0, 120);
+      const d = await appelApi('enregistrer', { exercice: ex, modifieAttendu: null });
+      if (!d.ok) { $('mxMessage').textContent = d.erreur || 'Duplication impossible.'; return; }
+      journal('Exercice dupliqué : ' + nouveau, 'info');
+      await afficherListeExercices();
+    } catch (e) { $('mxMessage').textContent = 'Duplication impossible : ' + e.message; }
+  }
+  async function supprimerSurSite(e) {
+    if (!confirm('Supprimer l\'exercice « ' + e.titre + ' » ? Les élèves ne pourront plus l\'ouvrir. (Une copie reste dans la corbeille du site.)')) return;
+    try {
+      const d = await appelApi('supprimer', { id: e.id });
+      if (!d.ok) { $('mxMessage').textContent = d.erreur || 'Suppression impossible.'; return; }
+      journal('Exercice supprimé : ' + e.id, 'info');
+      await afficherListeExercices();
+    } catch (err) { $('mxMessage').textContent = 'Suppression impossible : ' + err.message; }
+  }
+  async function copierBalise(e) {
+    const texte = baliseIframe(e.id, e.titre, adresseOutil());
+    try { await navigator.clipboard.writeText(texte); $('mxMessage').textContent = 'Balise copiée : colle-la dans ta page.'; }
+    catch (err) { $('mxMessage').textContent = 'Copie impossible. Sélectionne et copie : ' + texte; }
+  }
+  async function enregistrerSurSite(ecraser) {
+    const ex = lireFormulaireExercice();
+    if (!ex) return;
+    const enEdition = state.exerciceEnEdition || {};
+    const attendu = enEdition.id === ex.id && enEdition.modifie ? enEdition.modifie : null;
+    $('exMessageSite').textContent = 'Enregistrement…';
+    let d;
+    try { d = await appelApi('enregistrer', { exercice: ex, modifieAttendu: attendu, ecraser: !!ecraser }); }
+    catch (e) { $('exMessageSite').textContent = "Impossible de joindre le site : " + e.message; return; }
+    if (d.statut === 409 && d.conflit) {
+      if (confirm('Cet exercice a été modifié ailleurs depuis que tu l\'as ouvert. Remplacer quand même la version du site ? (L\'ancienne version est gardée.)')) return enregistrerSurSite(true);
+      $('exMessageSite').textContent = 'Enregistrement annulé.'; return;
+    }
+    if (d.statut === 401) { state.api.connecte = false; majBoutonsApi(); $('exMessageSite').textContent = 'Tu n\'es plus connecté : ouvre « Mes exercices » et reconnecte-toi.'; return; }
+    if (!d.ok) { $('exMessageSite').textContent = d.erreur || 'Enregistrement impossible.'; return; }
+    state.exerciceEnEdition = { id: ex.id, titre: ex.titre, consigne: ex.consigne, modeleUrl: ex.modele ? ex.modele.url : '', modifie: d.modifie };
+    $('exMessageSite').textContent = 'Enregistré sur ton site : exercices/' + ex.id + '.json';
+    $('exBaliseSite').value = baliseIframe(ex.id, ex.titre, adresseOutil());
+    $('exResultat').style.display = 'none';
+    $('exResultatSite').style.display = 'block';
+    journal('Exercice enregistré sur le site : ' + ex.id, 'info');
   }
   // Côté enseignant : rouvrir un exercice pour le modifier.
   function ouvrirExerciceFichier(ex) {
     if (!exerciceValide(ex)) { journal("Ce fichier n'est pas un exercice valide.", 'err'); return; }
     chargerDonnees({ classes: ex.classes || [], blocs: ex.blocs });
-    state.exerciceEnEdition = { id: ex.id || '', titre: ex.titre, consigne: ex.consigne || '', modeleUrl: (ex.modele && ex.modele.url) || '' };
+    state.exerciceEnEdition = { id: ex.id || '', titre: ex.titre, consigne: ex.consigne || '', modeleUrl: (ex.modele && ex.modele.url) || '', modifie: ex.modifie || '' };
     if (ex.modele && ex.modele.url) $('modelUrl').value = ex.modele.url;
     journal('Exercice ouvert : « ' + ex.titre + ' ». Modifie-le, puis clique sur « Exporter comme exercice ».', 'info');
   }
@@ -1296,6 +1467,7 @@
   if (idExercice !== null) {
     demarrerModeExercice(idExercice);
   } else {
+    if (location.protocol !== 'file:') verifierApi();
     try {
       const sauve = JSON.parse(localStorage.getItem(state.cleSauvegarde) || 'null');
       if (sauve && sauve.blocs) chargerDonnees(sauve);
@@ -1307,5 +1479,5 @@
 
   // Accès pour les tests automatiques
   window.iaArduino = {
-    conseilIframe, dansIframe, migrer, activerModele, fabriquerId, state, ws, compiler, texteCode, ai, out, demarrer, arreter, simuler, activerTest, insererExemple, insererExemple2 };
+    conseilIframe, dansIframe, migrer, activerModele, fabriquerId, verifierApi, state, ws, compiler, texteCode, ai, out, demarrer, arreter, simuler, activerTest, insererExemple, insererExemple2 };
 })();
