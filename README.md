@@ -25,6 +25,24 @@ Sans carte ni webcam, le « mode test » simule la reconnaissance et affiche les
 
 Les broches D0 et D1 sont volontairement absentes : elles servent à la liaison USB.
 
+## Intégrer l'atelier dans un site (iframe)
+
+1. Mettre en ligne le fichier `dist/ia-arduino.html` sur une adresse **https** (hébergement du collège, GitHub Pages, serveur ÉLÉA…). Le fichier est autonome : une seule page, rien d'autre à héberger.
+2. Dans la page du site, ajouter la balise suivante (exemple complet : `exemples/integration-iframe.html`) :
+
+```html
+<iframe src="https://mon-site.fr/ia-arduino.html" title="Atelier de blocs Arduino"
+        allow="serial; camera" style="width:100%; height:90vh; border:0"></iframe>
+```
+
+- `allow="serial; camera"` est **indispensable** : sans lui, Chrome interdit la carte et la webcam dans l'iframe.
+- Le site qui contient l'iframe doit lui aussi être en **https** (sauf essai en local).
+- Si ça ne marche pas, la page l'écrit dans son journal : « Cette page est intégrée dans un autre site qui ne l'autorise pas… ».
+- Le serveur ne doit pas envoyer d'en-tête `X-Frame-Options` ni `Content-Security-Policy: frame-ancestors` qui interdit votre site, ni de `Permissions-Policy` qui bloque `serial` ou `camera`.
+- Chrome ou Edge sur ordinateur uniquement. Le programme des élèves est mémorisé dans le navigateur (localStorage) ; certains réglages de confidentialité peuvent l'empêcher dans une iframe, ce qui n'empêche pas de programmer.
+
+**Vérifié :** les tests ouvrent la page dans une iframe `allow="serial; camera"` (adresse locale) : elle se charge sans erreur et Web Serial y est disponible. **À vérifier chez vous :** la connexion à la vraie carte et la webcam depuis votre site réel en https.
+
 ## Développement
 
 Prérequis : Node.js 20+.

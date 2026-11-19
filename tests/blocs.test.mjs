@@ -20,7 +20,7 @@ test("la page se charge sans erreur JavaScript", () => {
 test("exemple « reconnaissance » : code généré et commandes simulées", async () => {
   const { page } = ctx;
   await effacerEtTest(page);
-  await page.click('#btnExemple');
+  await page.evaluate(() => window.iaArduino.insererExemple());
   const code = await compiler(page);
   assert.match(code, /ai\.is\("classe A", 80\)/);
   assert.match(code, /out\.led\(13, 1\)/);
@@ -38,7 +38,7 @@ test("exemple « reconnaissance » : code généré et commandes simulées", asy
 test("exemple « clignoter » : boucle infinie, arrêt propre", async () => {
   const { page } = ctx;
   await effacerEtTest(page);
-  await page.click('#btnExemple2');
+  await page.evaluate(() => window.iaArduino.insererExemple2());
   assert.match(await compiler(page), /while \(true\)/);
   await page.click('#btnDemarrer');
   await attendre(1200);

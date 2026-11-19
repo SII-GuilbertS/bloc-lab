@@ -22,6 +22,7 @@ Page web unique **en français** pour programmer une Arduino par blocs (Blockly)
 - Le port série ne peut être ouvert que par un seul programme à la fois (onglet Vittascience, Arduino IDE, moniteur série…) : message « port occupé » explicite.
 - Les modèles Teachable Machine « image » uniquement (pas pose/son). Image miroir sur le canvas comme dans Teachable Machine.
 - Web Serial : Chrome/Edge seulement ; `file://` est un contexte sûr, mais dans ÉLÉA (iframe) il faudra `allow="serial; camera"` et du HTTPS.
+- **Iframe** : `allow="serial; camera"` + https obligatoires ; `conseilIframe()` ajoute l'explication aux erreurs `SecurityError`/`NotAllowedError`. Exemple : `exemples/integration-iframe.html`, test : `tests/iframe.test.mjs` (jamais testé sur un vrai site https avec la vraie carte).
 - Vittascience/Adacraft n'a pas fonctionné en mode « live » pour cet usage (d'où ce projet).
 
 ## Conventions
@@ -32,5 +33,5 @@ Page web unique **en français** pour programmer une Arduino par blocs (Blockly)
 ## Pistes
 - Entrées analogiques (A0–A5), buzzer/tonalité, moteur ; afficheur.
 - Modèles « pose » de Teachable Machine.
-- Intégration ÉLÉA : paquet SCORM ou iframe HTTPS ; tester les permissions `serial` et `camera`.
+- Intégration ÉLÉA : iframe HTTPS faite (voir README) mais à tester sur ÉLÉA avec la vraie carte ; paquet SCORM possible.
 - Éditeur multi-cartes (Nano, Mega) : le `.hex` actuel vise l'Uno (ATmega328P).
