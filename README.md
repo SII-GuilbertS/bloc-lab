@@ -53,7 +53,7 @@ Un **exercice** est un petit fichier `.json` : titre, consigne, modèle, program
 1. Prépare le programme de départ avec les blocs, et charge le modèle par son lien si tu veux qu'il soit fourni aux élèves.
 2. Clique sur **« Exporter comme exercice »** : titre, nom du fichier, consigne, lien du modèle (facultatif).
 3. Un fichier `nom.json` est téléchargé. La fenêtre donne aussi la **balise iframe** à copier.
-4. Envoie `nom.json` dans le dossier `exercices/` à côté de `index.html` sur ton site (`www/atelier-blocs/exercices/nom.json`).
+4. Sur ton site, à côté de `index.html` (même dossier), crée un dossier `exercices` et mets-y `nom.json` (par exemple `www/atelier-blocs/exercices/nom.json`).
 5. Pour le modifier plus tard : **« Ouvrir… »** avec ce fichier, modifie, puis exporte de nouveau avec le même nom.
 
 **Ce que voit l'élève** en ouvrant `https://ton-site/atelier-blocs/?exercice=nom` (ou la balise iframe) :
