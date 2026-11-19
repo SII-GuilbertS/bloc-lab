@@ -148,7 +148,7 @@ test("enseignant : exporter un exercice puis le rouvrir pour le modifier", async
     assert.equal(ex.titre, 'Le clignotant d’Émilie'); assert.equal(ex.consigne, 'Fais clignoter la LED.');
     assert.equal(ex.modele.url, 'https://teachablemachine.withgoogle.com/models/XYZ/');
     assert.ok(ex.blocs.blocks.blocks.length >= 1);
-    assert.match(await page.inputValue('#exBalise'), /\?exercice=le-clignotant-d-emilie" .*allow="serial; camera"/);
+    assert.match(await page.inputValue('#exBalise'), /\?exercice=le-clignotant-d-emilie" .*allow="serial; camera; fullscreen"/);
     assert.match(await page.innerText('#exFichier'), /exercices\/le-clignotant-d-emilie\.json/);
     await page.click('#btnFermerExercice');
     await page.evaluate(() => window.iaArduino.ws.clear());
