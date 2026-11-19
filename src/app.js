@@ -936,8 +936,6 @@
   });
   $('btnDemarrer').addEventListener('click', demarrer);
   $('btnArreter').addEventListener('click', arreter);
-  $('btnExemple').addEventListener('click', insererExemple);
-  $('btnExemple2').addEventListener('click', insererExemple2);
   $('btnEnregistrer').addEventListener('click', enregistrer);
   $('btnOuvrir').addEventListener('click', () => $('fichierProgramme').click());
   $('fichierProgramme').addEventListener('change', async (e) => {
@@ -973,5 +971,5 @@
 
   // Accès pour les tests automatiques
   window.iaArduino = {
-    conseilIframe, dansIframe, state, ws, compiler, texteCode, ai, out, demarrer, arreter, simuler, activerTest, insererExemple };
+    conseilIframe, dansIframe, state, ws, compiler, texteCode, ai, out, demarrer, arreter, simuler, activerTest, insererExemple, insererExemple2 };
 })();
